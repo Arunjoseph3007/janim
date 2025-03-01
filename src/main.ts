@@ -1,4 +1,4 @@
-import { Circle, Polygon, Scene, Rectangle } from "./janim";
+import { Circle, Polygon, Scene, Rectangle, Translate } from "./janim";
 import "./style.css";
 
 const FACTOR = 40;
@@ -21,13 +21,21 @@ class MyScene extends Scene {
     s1.rotateDeg(45);
     s1.scaleX(2);
     s1.fillStyle = "white";
-    this.add(s1);
+    // this.add(s1);
+
+    const ta1 = new Translate(s1, [100, 100], [200, 200]);
+    this.play(ta1)
   }
 }
 
 const scene = new MyScene();
 
+console.log(scene.animationTree.length);
+console.log(scene.currAnimIndex);
+
+
 function draw(ctx: CanvasRenderingContext2D, dt: number) {
+  // console.log(scene.animationTree[scene.currAnimIndex].runTimeMs);
   scene.stepAnimation(dt);
   scene.render(ctx);
 }

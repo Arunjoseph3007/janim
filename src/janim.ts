@@ -2,6 +2,8 @@ const todo = () => {
   throw new Error("TODO: not implmented yet");
 };
 
+const lerpNum = (t: number, a: number, b: number) => a + (b - a) * t;
+
 type Vec2 = [number, number];
 
 export class JObject {
@@ -159,15 +161,59 @@ export class Polygon extends JObject {
     ctx.fill();
   }
 }
-export class Animation {
+export class JAnimation {
   background = false;
-  durationMs = 1000;
+  durationMs = 3000;
+  runTimeMs = 0;
   done = false;
+
+  constructor() {}
+  step(dt: number) {
+    todo();
+  }
+  render(ctx: CanvasRenderingContext2D) {
+    todo();
+  }
 }
+export class Translate extends JAnimation {
+  obj: JObject;
+  from: Vec2;
+  to: Vec2;
+
+  constructor(obj: JObject, from: Vec2, to: Vec2) {
+    super();
+    this.obj = obj;
+    this.from = from;
+    this.to = to;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    this.obj.setTranslation(
+      lerpNum(t, this.from[0], this.to[0]),
+      lerpNum(t, this.from[1], this.to[1])
+    );
+
+    if (t > 1) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.obj.wrapedRender(ctx);
+  }
+}
+
 export class Scene {
   objects: JObject[] = [];
-  animationTree: Animation[] = [];
+  animationTree: JAnimation[] = [];
   selfCenter = false;
+  currAnimIndex = 0;
+  runTimeMs = 0;
+  done = false;
 
   constructor() {
     this.construct();
@@ -180,23 +226,39 @@ export class Scene {
     this.objects = this.objects.filter((it) => it != obj);
   }
 
-  play(anim: Animation) {
+  play(anim: JAnimation) {
     this.animationTree.push(anim);
   }
 
-  // TODO: using dt step through animation graph
-  stepAnimation(dt: number) {}
+  stepAnimation(dt: number) {
+    this.runTimeMs += dt;
 
-  // TODO: virtual method should contruct animation graph
-  construct() {}
+    if (this.currAnimIndex >= this.animationTree.length) {
+      this.done = true;
+    }
+    if (this.done) return;
 
-  // TODO render current state of animationGraph and objects
+    const currAnim = this.animationTree[this.currAnimIndex];
+    currAnim.step(dt);
+
+    if (currAnim.done) {
+      this.currAnimIndex++;
+    }
+  }
+
+  construct() {
+    todo();
+  }
+
   render(ctx: CanvasRenderingContext2D) {
     ctx.globalAlpha;
     if (this.selfCenter) {
       ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
     this.objects.forEach((obj) => obj.wrapedRender(ctx));
+
+    this.animationTree.forEach((anim) => anim.render(ctx));
   }
 }

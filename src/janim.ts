@@ -2,9 +2,14 @@ const todo = () => {
   throw new Error("TODO: not implmented yet");
 };
 
-const lerpNum = (t: number, a: number, b: number) => a + (b - a) * t;
-
 type Vec2 = [number, number];
+type TLerpFunc<T> = (t: number, a: T, b: T) => T;
+
+const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
+const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
+  lerpNum(t, a[0], b[0]),
+  lerpNum(t, a[1], b[1]),
+];
 
 export class JObject {
   strokeStyle: string | CanvasGradient | CanvasPattern = "#fff";
@@ -144,7 +149,6 @@ export class Rectangle extends JObject {
     ctx.fill();
   }
 }
-
 export class Polygon extends JObject {
   points: Vec2[];
   constructor(...points: Vec2[]) {
@@ -161,6 +165,7 @@ export class Polygon extends JObject {
     ctx.fill();
   }
 }
+
 export class JAnimation {
   background = false;
   durationMs = 3000;
@@ -174,6 +179,21 @@ export class JAnimation {
   render(ctx: CanvasRenderingContext2D) {
     todo();
   }
+}
+export class Wait extends JAnimation {
+  constructor(durationMs = 1000) {
+    super();
+    this.durationMs = durationMs;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+    const t = this.runTimeMs / this.durationMs;
+
+    if (t > 1) this.done = true;
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {}
 }
 export class Translate extends JAnimation {
   obj: JObject;
@@ -192,10 +212,63 @@ export class Translate extends JAnimation {
 
     const t = this.runTimeMs / this.durationMs;
 
-    this.obj.setTranslation(
-      lerpNum(t, this.from[0], this.to[0]),
-      lerpNum(t, this.from[1], this.to[1])
-    );
+    this.obj.translation = lerpVec2(t, this.from, this.to);
+
+    if (t > 1) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.obj.wrapedRender(ctx);
+  }
+}
+export class FadeIn extends JAnimation {
+  obj: JObject;
+  from: number;
+  to: number;
+
+  constructor(obj: JObject, from: number = 0, to: number = 1) {
+    super();
+    this.obj = obj;
+    this.from = from;
+    this.to = to;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    this.obj.opacity = lerpNum(t, this.from, this.to);
+
+    if (t > 1) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.obj.wrapedRender(ctx);
+  }
+}
+export class Spinner extends JAnimation {
+  obj: JObject;
+  from: number;
+  to: number;
+
+  constructor(obj: JObject, from: number = 0, to: number = 360) {
+    super();
+    this.obj = obj;
+    this.from = from;
+    this.to = to;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    this.obj.setRotationDeg(lerpNum(t, this.from, this.to));
 
     if (t > 1) {
       this.done = true;
@@ -228,6 +301,10 @@ export class Scene {
 
   play(anim: JAnimation) {
     this.animationTree.push(anim);
+  }
+
+  wait(durationMs = 1000) {
+    this.play(new Wait(durationMs));
   }
 
   stepAnimation(dt: number) {

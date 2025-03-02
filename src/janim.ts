@@ -229,6 +229,22 @@ export class Polygon extends JObject {
     ctx.fill();
   }
 }
+export class Group extends JObject {
+  objs: JObject[];
+
+  constructor(...objs: JObject[]) {
+    super();
+    this.objs = objs;
+  }
+
+  add(...objs: JObject[]) {
+    this.objs.push(...objs);
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.objs.forEach((obj) => obj.render(ctx));
+  }
+}
 
 export class JAnimation {
   background = false;
@@ -531,3 +547,21 @@ export class Scene {
     this.animationTree.forEach((anim) => anim.render(ctx));
   }
 }
+
+type _CP<T extends abstract new (...args: any) => any> =
+  ConstructorParameters<T>;
+
+export const jf = {
+  RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
+  Scene: (...a: _CP<typeof Scene>) => new Scene(...a),
+  Circle: (...a: _CP<typeof Circle>) => new Circle(...a),
+  Rectangle: (...a: _CP<typeof Rectangle>) => new Rectangle(...a),
+  Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
+  Group: (...a: _CP<typeof Group>) => new Group(...a),
+  Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
+  FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),
+  Spinner: (...a: _CP<typeof Spinner>) => new Spinner(...a),
+  Wait: (...a: _CP<typeof Wait>) => new Wait(...a),
+  Sequence: (...a: _CP<typeof Sequence>) => new Sequence(...a),
+  Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),
+};

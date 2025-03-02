@@ -6,6 +6,9 @@ import {
   Translate,
   FadeIn,
   Spinner,
+  ColorMorph,
+  Parallel,
+  Sequence,
 } from "./janim";
 import "./style.css";
 
@@ -28,13 +31,12 @@ class MyScene extends Scene {
     s1.translate(200, 200);
     s1.fillStyle = "white";
 
-    const ta1 = new FadeIn(s1);
-    this.play(ta1);
-
-    // this.wait();
-
+    const p1 = new ColorMorph(s1, "red", "blue");
     const sp = new Spinner(s1);
-    this.play(sp);
+
+    const pl1 = new Sequence(p1, sp);
+    // const pl1 = new Parallel(p1, sp);
+    this.play(pl1);
   }
 }
 

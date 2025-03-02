@@ -2,6 +2,41 @@ const todo = () => {
   throw new Error("TODO: not implmented yet");
 };
 
+export class RGBA {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+
+  constructor(r: number, g: number, b: number, a: number = 1) {
+    this.r = r;
+    this.g = g;
+    this.b = b;
+    this.a = a;
+  }
+
+  static fromStr(str: string) {
+    const startIndex = str.indexOf("(") + 1;
+    const segments = str
+      .slice(startIndex, -1)
+      .split(",")
+      .map((s) => s.trim())
+      .map(Number);
+
+    // @ts-expect-error
+    return new RGBA(...segments);
+  }
+  toStyle() {
+    const { r, g, b, a } = this;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  toString() {
+    return this.toStyle();
+  }
+}
+const WHITE = new RGBA(1, 1, 1);
+const TRANSPARENT = new RGBA(1, 1, 0);
+
 type Vec2 = [number, number];
 type TLerpFunc<T> = (t: number, a: T, b: T) => T;
 
@@ -10,14 +45,43 @@ const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
   lerpNum(t, a[0], b[0]),
   lerpNum(t, a[1], b[1]),
 ];
+const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
+  new RGBA(
+    lerpNum(t, a.r, b.r),
+    lerpNum(t, a.g, b.g),
+    lerpNum(t, a.b, b.b),
+    lerpNum(t, a.a, b.a)
+  );
+
+const __dummyElm = document.createElement("div");
+document.body.appendChild(__dummyElm);
+const colorToRGBA = (color: string) => {
+  __dummyElm.style.color = color;
+  const rgbstr = window.getComputedStyle(__dummyElm).color;
+  return RGBA.fromStr(rgbstr);
+};
 
 export class JObject {
-  strokeStyle: string | CanvasGradient | CanvasPattern = "#fff";
-  fillStyle: string | CanvasGradient | CanvasPattern = "transparent";
+  _strokeStyle: RGBA = WHITE;
+  _fillStyle: RGBA = TRANSPARENT;
   translation: Vec2 = [0, 0];
   scaling: Vec2 = [1, 1];
   rotation = 0;
   opacity = 1;
+
+  set fillStyle(c: string) {
+    this._fillStyle = colorToRGBA(c);
+  }
+  get fillStyle() {
+    return this._fillStyle.toStyle();
+  }
+
+  set strokeStyle(c: string) {
+    this._strokeStyle = colorToRGBA(c);
+  }
+  get strokeStyle() {
+    return this._strokeStyle.toStyle();
+  }
 
   translateX(x: number) {
     this.translation[0] += x;
@@ -200,10 +264,10 @@ export class Translate extends JAnimation {
   from: Vec2;
   to: Vec2;
 
-  constructor(obj: JObject, from: Vec2, to: Vec2) {
+  constructor(obj: JObject, from: Vec2 | null, to: Vec2) {
     super();
     this.obj = obj;
-    this.from = from;
+    this.from = from || obj.translation;
     this.to = to;
   }
 
@@ -277,6 +341,134 @@ export class Spinner extends JAnimation {
 
   render(ctx: CanvasRenderingContext2D): void {
     this.obj.wrapedRender(ctx);
+  }
+}
+enum ColorMorphMode {
+  Stroke,
+  Fill,
+  StrokeAndFill,
+}
+export class ColorMorph extends JAnimation {
+  obj: JObject;
+  from: RGBA;
+  to: RGBA;
+  mode: ColorMorphMode;
+
+  constructor(
+    obj: JObject,
+    from: RGBA | string | null,
+    to: RGBA | string,
+    mode = ColorMorphMode.StrokeAndFill
+  ) {
+    super();
+    this.obj = obj;
+    if (from instanceof RGBA) this.from = from;
+    else if (typeof from == "string") this.from = colorToRGBA(from);
+    else this.from = obj._fillStyle;
+
+    if (to instanceof RGBA) this.to = to;
+    else this.to = colorToRGBA(to);
+    this.mode = mode;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    const color = lerpRgba(t, this.from, this.to);
+
+    switch (this.mode) {
+      case ColorMorphMode.Fill:
+        this.obj._fillStyle = color;
+
+        break;
+      case ColorMorphMode.Stroke:
+        this.obj._strokeStyle = color;
+        break;
+      case ColorMorphMode.StrokeAndFill:
+        this.obj._strokeStyle = color;
+        this.obj._fillStyle = color;
+        break;
+    }
+
+    if (t > 1) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.obj.wrapedRender(ctx);
+  }
+}
+
+export class Parallel extends JAnimation {
+  anims: JAnimation[] = [];
+
+  constructor(...anims: JAnimation[]) {
+    super();
+    this.anims = anims;
+    this.updateDurationMs();
+  }
+
+  private updateDurationMs() {
+    this.durationMs = this.anims
+      .map((anim) => anim.durationMs)
+      .reduce((p, r) => Math.max(p, r), 0);
+  }
+
+  add(...anims: JAnimation[]) {
+    this.anims.push(...anims);
+    this.updateDurationMs();
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    this.anims.forEach((anim) => anim.step(dt));
+
+    if (this.anims.every((anim) => anim.done)) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.anims.forEach((anim) => anim.render(ctx));
+  }
+}
+export class Sequence extends JAnimation {
+  anims: JAnimation[] = [];
+
+  constructor(...anims: JAnimation[]) {
+    super();
+    this.anims = anims;
+    this.updateDurationMs();
+  }
+
+  private updateDurationMs() {
+    this.durationMs = this.anims
+      .map((anim) => anim.durationMs)
+      .reduce((p, r) => p + r, 0);
+  }
+
+  add(...anims: JAnimation[]) {
+    this.anims.push(...anims);
+    this.updateDurationMs();
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const currAnim = this.anims.find((anim) => !anim.done);
+    currAnim?.step(dt);
+
+    if (this.anims.every((anim) => anim.done)) {
+      this.done = true;
+    }
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.anims.forEach((anim) => anim.render(ctx));
   }
 }
 

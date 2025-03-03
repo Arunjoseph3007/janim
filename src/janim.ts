@@ -256,6 +256,10 @@ export class JAnimation {
   step(dt: number) {
     todo();
   }
+
+  repeat(times: number) {
+    return new Repeat(this, times);
+  }
 }
 export class Wait extends JAnimation {
   constructor(durationMs = 1000) {
@@ -427,6 +431,33 @@ export class Parallel extends JAnimation {
     }
   }
 }
+export class Repeat extends JAnimation {
+  anim: JAnimation;
+  times: number;
+
+  constructor(anim: JAnimation, times: number) {
+    super();
+    this.anim = anim;
+    this.times = times;
+    this.durationMs = this.anim.durationMs * times;
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    this.anim.step(dt);
+
+    if (this.anim.done) {
+      if (t > 1) {
+        this.done = true;
+      } else {
+        this.anim.done = false;
+      }
+    }
+  }
+}
 export class Sequence extends JAnimation {
   anims: JAnimation[] = [];
 
@@ -521,12 +552,15 @@ type _CP<T extends abstract new (...args: any) => any> =
   ConstructorParameters<T>;
 
 export const jf = {
-  RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
   Scene: (...a: _CP<typeof Scene>) => new Scene(...a),
+  // Utils
+  RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
+  // JObjects
   Circle: (...a: _CP<typeof Circle>) => new Circle(...a),
   Rectangle: (...a: _CP<typeof Rectangle>) => new Rectangle(...a),
   Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
   Group: (...a: _CP<typeof Group>) => new Group(...a),
+  // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),
   Spinner: (...a: _CP<typeof Spinner>) => new Spinner(...a),
@@ -534,4 +568,5 @@ export const jf = {
   Wait: (...a: _CP<typeof Wait>) => new Wait(...a),
   Sequence: (...a: _CP<typeof Sequence>) => new Sequence(...a),
   Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),
+  Repeat: (...a: _CP<typeof Repeat>) => new Repeat(...a),
 };

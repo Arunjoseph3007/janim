@@ -24,7 +24,7 @@ class MyScene extends Scene {
     const p1 = jf.ColorMorph(s1, null, "blue");
     const sp = jf.Spinner(s1);
 
-    const pl1 = jf.Parallel(p1, sp);
+    const pl1 = jf.Parallel(p1, sp).repeat(3);
     this.play(pl1);
   }
 }

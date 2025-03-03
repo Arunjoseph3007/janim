@@ -1,15 +1,4 @@
-import {
-  Circle,
-  Polygon,
-  Scene,
-  Rectangle,
-  Translate,
-  FadeIn,
-  Spinner,
-  ColorMorph,
-  Parallel,
-  Sequence,
-} from "./janim";
+import { Scene, jf } from "./janim";
 import "./style.css";
 
 const FACTOR = 40;
@@ -22,20 +11,20 @@ class MyScene extends Scene {
   }
 
   construct() {
-    const c1 = new Circle(25);
-    c1.translate(50, 50);
+    const c1 = jf.Circle(25).translate(50, 50);
     c1.fillStyle = "pink";
     this.add(c1);
 
-    const s1 = new Rectangle(50, 50);
-    s1.translate(200, 200);
+    const s1 = jf.Rectangle(50, 50).translate(200, 200);
     s1.fillStyle = "white";
+    this.add(s1);
 
-    const p1 = new ColorMorph(s1, "red", "blue");
-    const sp = new Spinner(s1);
+    this.wait(500);
 
-    const pl1 = new Sequence(p1, sp);
-    // const pl1 = new Parallel(p1, sp);
+    const p1 = jf.ColorMorph(s1, null, "blue");
+    const sp = jf.Spinner(s1);
+
+    const pl1 = jf.Parallel(p1, sp);
     this.play(pl1);
   }
 }

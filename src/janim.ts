@@ -256,9 +256,6 @@ export class JAnimation {
   step(dt: number) {
     todo();
   }
-  render(ctx: CanvasRenderingContext2D) {
-    todo();
-  }
 }
 export class Wait extends JAnimation {
   constructor(durationMs = 1000) {
@@ -272,8 +269,6 @@ export class Wait extends JAnimation {
 
     if (t > 1) this.done = true;
   }
-
-  render(ctx: CanvasRenderingContext2D): void {}
 }
 export class Translate extends JAnimation {
   obj: JObject;
@@ -297,10 +292,6 @@ export class Translate extends JAnimation {
     if (t > 1) {
       this.done = true;
     }
-  }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.obj.wrapedRender(ctx);
   }
 }
 export class FadeIn extends JAnimation {
@@ -326,10 +317,6 @@ export class FadeIn extends JAnimation {
       this.done = true;
     }
   }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.obj.wrapedRender(ctx);
-  }
 }
 export class Spinner extends JAnimation {
   obj: JObject;
@@ -353,10 +340,6 @@ export class Spinner extends JAnimation {
     if (t > 1) {
       this.done = true;
     }
-  }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.obj.wrapedRender(ctx);
   }
 }
 enum ColorMorphMode {
@@ -412,10 +395,6 @@ export class ColorMorph extends JAnimation {
       this.done = true;
     }
   }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.obj.wrapedRender(ctx);
-  }
 }
 
 export class Parallel extends JAnimation {
@@ -447,10 +426,6 @@ export class Parallel extends JAnimation {
       this.done = true;
     }
   }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.anims.forEach((anim) => anim.render(ctx));
-  }
 }
 export class Sequence extends JAnimation {
   anims: JAnimation[] = [];
@@ -481,10 +456,6 @@ export class Sequence extends JAnimation {
     if (this.anims.every((anim) => anim.done)) {
       this.done = true;
     }
-  }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    this.anims.forEach((anim) => anim.render(ctx));
   }
 }
 
@@ -543,8 +514,6 @@ export class Scene {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     this.objects.forEach((obj) => obj.wrapedRender(ctx));
-
-    this.animationTree.forEach((anim) => anim.render(ctx));
   }
 }
 
@@ -561,6 +530,7 @@ export const jf = {
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),
   Spinner: (...a: _CP<typeof Spinner>) => new Spinner(...a),
+  ColorMorph: (...a: _CP<typeof ColorMorph>) => new ColorMorph(...a),
   Wait: (...a: _CP<typeof Wait>) => new Wait(...a),
   Sequence: (...a: _CP<typeof Sequence>) => new Sequence(...a),
   Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),

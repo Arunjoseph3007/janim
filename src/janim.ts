@@ -55,6 +55,32 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.a, b.a)
   );
 
+  /**
+   * x =  2 * (1-t) * t * P1.x + t^2; 
+   * x =  2 * (1-t) * t * P1.x + t^2; 
+   * y =  2 * (1-t) * t * P1.y + t^2;
+   */
+type EasingFunc = (t: number) => number;
+const linear: EasingFunc = (t) => t;
+const quadratic: (anchor: Vec2) => EasingFunc = (anchor) => {
+  return function (x) {
+    const t = (x - 2 * anchor[1]) / (1 - 2 * anchor[1]);
+    const y = 2 * (1 - t) * t * anchor[1] + t * t;
+
+    return y;
+  };
+};
+const cubic: (a: Vec2, b: Vec2) => EasingFunc = (a, b) => {
+  return function (t) {
+    return t;
+  };
+};
+export const Easings = {
+  linear,
+  quadratic,
+  cubic,
+};
+
 const __dummyElm = document.createElement("div");
 document.body.appendChild(__dummyElm);
 const colorToRGBA = (color: string) => {
@@ -268,6 +294,11 @@ export class JAnimation {
     todo();
   }
 
+  in(durationMs: number) {
+    this.durationMs = durationMs;
+    return this;
+  }
+
   repeat(times: number) {
     return new Repeat(this, times);
   }
@@ -291,6 +322,7 @@ export class Wait extends JAnimation {
   }
 }
 export class SimplePropertyAnim extends JAnimation {
+  easing: EasingFunc = linear;
   constructor() {
     super();
   }
@@ -299,11 +331,16 @@ export class SimplePropertyAnim extends JAnimation {
     todo();
   }
 
+  ease(fn: EasingFunc) {
+    this.easing = fn;
+    return this;
+  }
+
   step(dt: number): void {
     this.runTimeMs += dt;
     const t = this.runTimeMs / this.durationMs;
 
-    this.updateProperty(t);
+    this.updateProperty(this.easing(t));
 
     if (t > 1) {
       this.done = true;

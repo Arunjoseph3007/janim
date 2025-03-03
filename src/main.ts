@@ -1,4 +1,4 @@
-import { Scene, jf } from "./janim";
+import { Easings, Scene, jf } from "./janim";
 import "./style.css";
 
 const FACTOR = 40;
@@ -11,29 +11,32 @@ class MyScene extends Scene {
   }
 
   construct() {
-    // const c1 = jf.Circle(25).translate(50, 50);
-    // c1.fillStyle = "pink";
-    // this.add(c1);
+    const c1 = jf.Circle(25).translate(50, 50);
+    c1.fillStyle = "pink";
+    this.add(c1);
 
-    // const s1 = jf.Rectangle(50, 50).translate(200, 200);
-    // s1.fillStyle = "white";
-    // this.add(s1);
+    const s1 = jf.Rectangle(50, 50).translate(100, 100);
+    s1.fillStyle = "red";
+    this.add(s1);
 
-    // this.wait(500);
+    this.wait(500);
 
-    // const p1 = jf.ColorMorph(s1, "red", "blue").repeat(2);
-    // const sp = jf.Spinner(s1);
+    const p1 = jf.ColorMorph(s1, "red", "blue");
+    const sp = jf
+      .Translate(s1, null, [140, 100])
+      .in(550)
+      .ease(Easings.quadratic([0, 1]));
 
-    // const pl1 = jf.Parallel(p1, sp);
-    // this.play(pl1);
+    const pl1 = jf.Parallel(p1, sp);
+    this.play(pl1);
 
-    const a = jf.Rectangle(50, 50).translate(50, 50).rotate(45).fill("red");
-    const b = jf.Circle(25).translate(300, 80).rotate(60).fill("pink");
+    // const a = jf.Rectangle(50, 50).translate(50, 50).rotate(45).fill("red");
+    // const b = jf.Circle(25).translate(300, 80).rotate(60).fill("pink");
 
-    this.add(a);
-    this.add(b);
+    // this.add(a);
+    // this.add(b);
 
-    this.play(jf.Morph(a, b));
+    // this.play(jf.Morph(a, b));
   }
 }
 

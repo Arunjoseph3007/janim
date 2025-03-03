@@ -28,7 +28,7 @@ class MyScene extends Scene {
     // this.play(pl1);
 
     const a = jf.Rectangle(50, 50).translate(50, 50).rotate(45).fill("red");
-    const b = jf.Circle(25).translate(100, 80).rotate(60).fill("pink");
+    const b = jf.Circle(25).translate(300, 80).rotate(60).fill("pink");
 
     this.add(a);
     this.add(b);

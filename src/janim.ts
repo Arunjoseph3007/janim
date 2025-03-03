@@ -2,6 +2,8 @@ const todo = () => {
   throw new Error("TODO: not implmented yet");
 };
 
+const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
+
 export class RGBA {
   r: number;
   g: number;
@@ -329,7 +331,7 @@ export class FadeIn extends JAnimation {
 
     const t = this.runTimeMs / this.durationMs;
 
-    this.obj.opacity = lerpNum(t, this.from, this.to);
+    this.obj.opacity = clamp(lerpNum(t, this.from, this.to));
 
     if (t > 1) {
       this.done = true;
@@ -486,7 +488,7 @@ export class Morph extends Parallel {
       new Spinner(source, source.rotation, dest.rotation),
       new ColorMorph(source, source._fillStyle, dest._fillStyle),
       new FadeIn(source, 1, 0),
-      
+
       new Translate(dest, source.translation, dest.translation),
       new Spinner(dest, source.rotation, dest.rotation),
       new ColorMorph(dest, source._fillStyle, dest._fillStyle),

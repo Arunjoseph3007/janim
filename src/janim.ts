@@ -290,7 +290,27 @@ export class Wait extends JAnimation {
     if (t > 1) this.done = true;
   }
 }
-export class Translate extends JAnimation {
+export class SimplePropertyAnim extends JAnimation {
+  constructor() {
+    super();
+  }
+
+  protected updateProperty(t: number) {
+    todo();
+  }
+
+  step(dt: number): void {
+    this.runTimeMs += dt;
+    const t = this.runTimeMs / this.durationMs;
+
+    this.updateProperty(t);
+
+    if (t > 1) {
+      this.done = true;
+    }
+  }
+}
+export class Translate extends SimplePropertyAnim {
   obj: JObject;
   from: Vec2;
   to: Vec2;
@@ -302,19 +322,11 @@ export class Translate extends JAnimation {
     this.to = to;
   }
 
-  step(dt: number): void {
-    this.runTimeMs += dt;
-
-    const t = this.runTimeMs / this.durationMs;
-
+  updateProperty(t: number): void {
     this.obj.translation = lerpVec2(t, this.from, this.to);
-
-    if (t > 1) {
-      this.done = true;
-    }
   }
 }
-export class FadeIn extends JAnimation {
+export class FadeIn extends SimplePropertyAnim {
   obj: JObject;
   from: number;
   to: number;
@@ -326,19 +338,11 @@ export class FadeIn extends JAnimation {
     this.to = to;
   }
 
-  step(dt: number): void {
-    this.runTimeMs += dt;
-
-    const t = this.runTimeMs / this.durationMs;
-
+  updateProperty(t: number): void {
     this.obj.opacity = clamp(lerpNum(t, this.from, this.to));
-
-    if (t > 1) {
-      this.done = true;
-    }
   }
 }
-export class Spinner extends JAnimation {
+export class Spinner extends SimplePropertyAnim {
   obj: JObject;
   from: number;
   to: number;
@@ -350,16 +354,8 @@ export class Spinner extends JAnimation {
     this.to = to;
   }
 
-  step(dt: number): void {
-    this.runTimeMs += dt;
-
-    const t = this.runTimeMs / this.durationMs;
-
+  protected updateProperty(t: number): void {
     this.obj.setRotationDeg(lerpNum(t, this.from, this.to));
-
-    if (t > 1) {
-      this.done = true;
-    }
   }
 }
 enum ColorMorphMode {
@@ -367,7 +363,7 @@ enum ColorMorphMode {
   Fill,
   StrokeAndFill,
 }
-export class ColorMorph extends JAnimation {
+export class ColorMorph extends SimplePropertyAnim {
   obj: JObject;
   from: RGBA;
   to: RGBA;
@@ -390,11 +386,7 @@ export class ColorMorph extends JAnimation {
     this.mode = mode;
   }
 
-  step(dt: number): void {
-    this.runTimeMs += dt;
-
-    const t = this.runTimeMs / this.durationMs;
-
+  protected updateProperty(t: number): void {
     const color = lerpRgba(t, this.from, this.to);
 
     switch (this.mode) {
@@ -409,10 +401,6 @@ export class ColorMorph extends JAnimation {
         this.obj._strokeStyle = color;
         this.obj._fillStyle = color;
         break;
-    }
-
-    if (t > 1) {
-      this.done = true;
     }
   }
 }

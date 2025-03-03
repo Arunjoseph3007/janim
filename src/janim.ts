@@ -76,6 +76,15 @@ export class JObject {
     return this._fillStyle.toStyle();
   }
 
+  fill(c: string) {
+    this.fillStyle = c;
+    return this;
+  }
+  stroke(c: string) {
+    this.strokeStyle = c;
+    return this;
+  }
+
   set strokeStyle(c: string) {
     this._strokeStyle = colorToRGBA(c);
   }
@@ -463,6 +472,28 @@ export class Repeat extends JAnimation {
     }
   }
 }
+export class Morph extends Parallel {
+  source: JObject;
+  dest: JObject;
+
+  constructor(source: JObject, dest: JObject) {
+    super();
+    this.source = source;
+    this.dest = dest;
+
+    this.add(
+      new Translate(source, source.translation, dest.translation),
+      new Spinner(source, source.rotation, dest.rotation),
+      new ColorMorph(source, source._fillStyle, dest._fillStyle),
+      new FadeIn(source, 1, 0),
+      
+      new Translate(dest, source.translation, dest.translation),
+      new Spinner(dest, source.rotation, dest.rotation),
+      new ColorMorph(dest, source._fillStyle, dest._fillStyle),
+      new FadeIn(dest, 0, 1)
+    );
+  }
+}
 export class Sequence extends JAnimation {
   anims: JAnimation[] = [];
 
@@ -574,4 +605,5 @@ export const jf = {
   Sequence: (...a: _CP<typeof Sequence>) => new Sequence(...a),
   Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),
   Repeat: (...a: _CP<typeof Repeat>) => new Repeat(...a),
+  Morph: (...a: _CP<typeof Morph>) => new Morph(...a),
 };

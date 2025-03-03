@@ -21,10 +21,10 @@ class MyScene extends Scene {
 
     this.wait(500);
 
-    const p1 = jf.ColorMorph(s1, null, "blue");
+    const p1 = jf.ColorMorph(s1, "red", "blue").repeat(2);
     const sp = jf.Spinner(s1);
 
-    const pl1 = jf.Parallel(p1, sp).repeat(3);
+    const pl1 = jf.Parallel(p1, sp);
     this.play(pl1);
   }
 }

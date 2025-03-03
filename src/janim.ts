@@ -260,6 +260,11 @@ export class JAnimation {
   repeat(times: number) {
     return new Repeat(this, times);
   }
+
+  reset() {
+    this.runTimeMs = 0;
+    this.done = false;
+  }
 }
 export class Wait extends JAnimation {
   constructor(durationMs = 1000) {
@@ -453,7 +458,7 @@ export class Repeat extends JAnimation {
       if (t > 1) {
         this.done = true;
       } else {
-        this.anim.done = false;
+        this.anim.reset();
       }
     }
   }

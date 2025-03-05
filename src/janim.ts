@@ -55,16 +55,18 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.a, b.a)
   );
 
-  /**
-   * x =  2 * (1-t) * t * P1.x + t^2; 
-   * x =  2 * (1-t) * t * P1.x + t^2; 
-   * y =  2 * (1-t) * t * P1.y + t^2;
-   */
+/**
+ * t =  y0 - y1 +- SQRT(y*y0 - 2*y*y1 + y*y2 - y0*y2)  / (y0 - 2y1 +y2)
+ * t =  - p +- SQRT(- 2*y*p + y)  / (- 2*p + 1)
+ * t =  - p.x +- SQRT(- 2*x*p.x + x)  / (- 2*p.x + 1)
+ * t =  p.x +- SQRT(-2*x*p.x + x)  / (2*p.x - 1)
+ */
 type EasingFunc = (t: number) => number;
 const linear: EasingFunc = (t) => t;
 const quadratic: (anchor: Vec2) => EasingFunc = (anchor) => {
   return function (x) {
-    const t = (x - 2 * anchor[1]) / (1 - 2 * anchor[1]);
+    const det = Math.sqrt(x - 2 * x * anchor[0]);
+    const t = (anchor[0] - det) / (2 * anchor[0] - 1);
     const y = 2 * (1 - t) * t * anchor[1] + t * t;
 
     return y;
@@ -230,22 +232,28 @@ export class Circle extends JObject {
 export class Rectangle extends JObject {
   w: number;
   h: number;
+  rounding: number;
 
   constructor(w: number, h: number) {
     super();
     this.w = w;
     this.h = h;
+    this.rounding = 2;
   }
 
   render(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
     const left = -this.w / 2;
     const top = -this.h / 2;
-    ctx.moveTo(left, top);
-    ctx.lineTo(left + this.w, top);
-    ctx.lineTo(left + this.w, top + this.h);
-    ctx.lineTo(left, top + this.h);
-    ctx.lineTo(left, top);
+    ctx.moveTo(left + this.rounding, top);
+    const r = this.rounding;
+    // prettier-ignore
+    {
+      ctx.arcTo(left + this.w,  top,          left + this.w,      top + r,          r);
+      ctx.arcTo(left + this.w,  top + this.h, left + this.w - r,  top + this.h,     r);
+      ctx.arcTo(left,           top + this.h, left,               top + this.h - r, r);
+      ctx.arcTo(left,           top,          left + r,           top,              r);
+    }
     ctx.stroke();
     ctx.fill();
   }

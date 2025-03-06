@@ -41,6 +41,11 @@ const TRANSPARENT = new RGBA(1, 1, 0);
 
 type Vec2 = [number, number];
 type TLerpFunc<T> = (t: number, a: T, b: T) => T;
+enum ColorMorphMode {
+  Stroke,
+  Fill,
+  StrokeAndFill,
+}
 
 const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
 const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
@@ -54,20 +59,38 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.b, b.b),
     lerpNum(t, a.a, b.a)
   );
-
 /**
+ * y = (−2y1+1)t^2 + 2(y1)t
+ *
  * t =  y0 - y1 +- SQRT(y*y0 - 2*y*y1 + y*y2 - y0*y2)  / (y0 - 2y1 +y2)
- * t =  - p +- SQRT(- 2*y*p + y)  / (- 2*p + 1)
- * t =  - p.x +- SQRT(- 2*x*p.x + x)  / (- 2*p.x + 1)
- * t =  p.x +- SQRT(-2*x*p.x + x)  / (2*p.x - 1)
+ * t =  - y1 +- SQRT(- 2*y*y1 + y)  / (- 2y1 + 1)
+ * t =  y1 +- SQRT(y - 2*y*y1)  / (2y1 - 1)
+ * t =  x1 +- SQRT(x - 2*x*x1)  / (2*x1 - 1)
  */
+
+const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
+  const disc = b * b - 4 * a * c;
+
+  // if (disc < 0) return [null, null];
+
+  const d = Math.sqrt(disc);
+
+  return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
+};
+
 type EasingFunc = (t: number) => number;
 const linear: EasingFunc = (t) => t;
-const quadratic: (anchor: Vec2) => EasingFunc = (anchor) => {
+const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
   return function (x) {
-    const det = Math.sqrt(x - 2 * x * anchor[0]);
-    const t = (anchor[0] - det) / (2 * anchor[0] - 1);
-    const y = 2 * (1 - t) * t * anchor[1] + t * t;
+    const a = 1 - 2 * cp[0];
+    const b = 2 * cp[0];
+    const c = -x;
+
+    const [t1, t2] = solveQuadEQ(a, b, c);
+
+    // const t = t1 >= 0 && t1 <= 1 ? t1 : t2;
+    const t = t1;
+    const y = t * t * (1 - 2 * cp[1]) + 2 * t + cp[1];
 
     return y;
   };
@@ -213,7 +236,79 @@ export class JObject {
     todo();
   }
 }
+type CubicCurve = [Vec2, Vec2, Vec2];
+export class Spline extends JObject {
+  private curves: CubicCurve[];
 
+  constructor() {
+    super();
+    this.curves = [];
+  }
+  addCurve(curve: CubicCurve) {
+    this.curves.push(curve);
+    return this;
+  }
+  insert(index: number, curve: CubicCurve) {
+    this.curves = [
+      ...this.curves.slice(0, index - 1),
+      curve,
+      ...this.curves.slice(index, -1),
+    ];
+    return this;
+  }
+  render(ctx: CanvasRenderingContext2D): void {
+    const origin = this.curves[this.curves.length - 1][2];
+
+    ctx.beginPath();
+    ctx.moveTo(origin[0], origin[1]);
+
+    this.curves.forEach((curve) => {
+      ctx.bezierCurveTo(
+        curve[0][0],
+        curve[0][1],
+        curve[1][0],
+        curve[1][1],
+        curve[2][0],
+        curve[2][1]
+      );
+    });
+
+    ctx.stroke();
+    ctx.fill();
+  }
+}
+export class Text extends JObject {
+  text: string;
+  mode: ColorMorphMode;
+  maxWidth?: number;
+  fontFamily: string;
+  fontSize: number;
+  constructor(text: string) {
+    super();
+    this.text = text;
+    this.mode = ColorMorphMode.StrokeAndFill;
+    this.fontFamily = "monospace";
+    this.fontSize = 40;
+
+    this._fillStyle = WHITE;
+    this._strokeStyle = WHITE;
+  }
+  getFont() {
+    return `${this.fontSize}px ${this.fontFamily}`;
+  }
+  render(ctx: CanvasRenderingContext2D): void {
+    ctx.font = this.getFont();
+
+    if (this.mode == ColorMorphMode.Fill) {
+      ctx.fillText(this.text, 0, 0, this.maxWidth);
+    } else if (this.mode == ColorMorphMode.Stroke) {
+      ctx.strokeText(this.text, 0, 0, this.maxWidth);
+    } else if (this.mode == ColorMorphMode.StrokeAndFill) {
+      ctx.fillText(this.text, 0, 0, this.maxWidth);
+      ctx.strokeText(this.text, 0, 0, this.maxWidth);
+    }
+  }
+}
 export class Circle extends JObject {
   r: number;
 
@@ -402,11 +497,6 @@ export class Spinner extends SimplePropertyAnim {
   protected updateProperty(t: number): void {
     this.obj.setRotationDeg(lerpNum(t, this.from, this.to));
   }
-}
-enum ColorMorphMode {
-  Stroke,
-  Fill,
-  StrokeAndFill,
 }
 export class ColorMorph extends SimplePropertyAnim {
   obj: JObject;
@@ -631,6 +721,8 @@ export const jf = {
   Rectangle: (...a: _CP<typeof Rectangle>) => new Rectangle(...a),
   Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
   Group: (...a: _CP<typeof Group>) => new Group(...a),
+  Spline: (...a: _CP<typeof Spline>) => new Spline(...a),
+  Text: (...a: _CP<typeof Text>) => new Text(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),

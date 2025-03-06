@@ -25,7 +25,15 @@ class MyScene extends Scene {
     const sp = jf
       .Translate(s1, null, [140, 100])
       .in(550)
-      .ease(Easings.quadratic([0, 1]));
+      .ease(Easings.quadratic([0.4, 0.8]));
+
+    const tt = jf
+      .Text("hell")
+      .translate(100, 100)
+      .fill("pink")
+      .stroke("yellow");
+    tt.fontSize = 90;
+    this.add(tt);
 
     const pl1 = jf.Parallel(p1, sp);
     this.play(pl1);

@@ -2,6 +2,7 @@ const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
 
+const DEBUG = 1;
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
 
 export class RGBA {
@@ -60,6 +61,8 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.a, b.a)
   );
 
+const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
+
 const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
   const disc = b * b - 4 * a * c;
   const d = Math.sqrt(disc);
@@ -101,8 +104,6 @@ const colorToRGBA = (color: string) => {
   const rgbstr = window.getComputedStyle(__dummyElm).color;
   return RGBA.fromStr(rgbstr);
 };
-
-type CubicCurve = [Vec2, Vec2, Vec2];
 
 export class JObject {
   _strokeStyle: RGBA = WHITE;
@@ -226,30 +227,59 @@ export class JObject {
     todo();
   }
 }
-export class Spline extends JObject {
-  private curves: CubicCurve[];
+type Curve = [Vec2, Vec2, Vec2];
+export class VObject extends JObject {
+  private curves: Curve[];
 
   constructor() {
     super();
     this.curves = [];
   }
-  addCurve(curve: CubicCurve) {
+  pos() {
+    return this.curves[this.curves.length - 1][1];
+  }
+  addCurve(curve: Curve) {
     this.curves.push(curve);
     return this;
   }
-  insert(index: number, curve: CubicCurve) {
-    this.curves = [
-      ...this.curves.slice(0, index - 1),
-      curve,
-      ...this.curves.slice(index, -1),
-    ];
+  addCurves(...curves: Curve[]) {
+    curves.forEach((p) => this.addCurve(p));
+    return this;
+  }
+  lineTo(point: Vec2) {
+    const mid = midpoint(this.pos(), point);
+    this.addCurve([mid, mid, point]);
+    return this;
+  }
+  cubicTo(c1: Vec2, c2: Vec2, c: Vec2) {
+    this.addCurve([c1, c2, c]);
+    return this;
+  }
+  quadTo(control: Vec2, point: Vec2) {
+    this.addCurve([control, control, point]);
     return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    const origin = this.curves[this.curves.length - 1][2];
+    ctx.fillStyle = "red";
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 2;
+
+    const topLeft = [Infinity, Infinity];
+    const bottomRight = [-Infinity, -Infinity];
+
+    this.curves.forEach((c) => {
+      topLeft[0] = Math.min(topLeft[0], c[2][0]);
+      topLeft[1] = Math.min(topLeft[1], c[2][1]);
+
+      bottomRight[0] = Math.max(bottomRight[0], c[2][0]);
+      bottomRight[1] = Math.max(bottomRight[1], c[2][1]);
+    });
+
+    const width = bottomRight[0] - topLeft[0];
+    const height = bottomRight[1] - topLeft[1];
 
     ctx.beginPath();
-    ctx.moveTo(origin[0], origin[1]);
+    ctx.moveTo(0, 0);
 
     this.curves.forEach((curve) => {
       ctx.bezierCurveTo(
@@ -261,9 +291,34 @@ export class Spline extends JObject {
         curve[2][1]
       );
     });
+    ctx.lineTo(0, 0);
 
     ctx.stroke();
     ctx.fill();
+
+    if (DEBUG) {
+      this.curves.forEach(([c1, c2, c], i) => {
+        ctx.beginPath();
+        ctx.arc(c1[0], c1[1], 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+
+        ctx.beginPath();
+        ctx.arc(c2[0], c2[1], 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+
+        ctx.beginPath();
+        ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+
+        ctx.fillText(i.toString(), c[0] - 10, c[1] - 10);
+      });
+    }
   }
 }
 export class Text extends JObject {
@@ -671,6 +726,7 @@ export class Scene {
 
   mainLoop() {
     this.construct();
+    this.render();
   }
 
   async play(anim: JAnimation) {
@@ -733,7 +789,7 @@ export const jf = {
   Rectangle: (...a: _CP<typeof Rectangle>) => new Rectangle(...a),
   Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
   Group: (...a: _CP<typeof Group>) => new Group(...a),
-  Spline: (...a: _CP<typeof Spline>) => new Spline(...a),
+  VObject: (...a: _CP<typeof VObject>) => new VObject(...a),
   Text: (...a: _CP<typeof Text>) => new Text(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),

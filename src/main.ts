@@ -19,7 +19,7 @@ class MyScene extends Scene {
     s1.fillStyle = "red";
     this.add(s1);
 
-    this.wait(500);
+    // this.wait(500);
 
     const p1 = jf.ColorMorph(s1, "red", "blue");
     const sp = jf

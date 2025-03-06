@@ -59,22 +59,10 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.b, b.b),
     lerpNum(t, a.a, b.a)
   );
-/**
- * y = (−2y1+1)t^2 + 2(y1)t
- *
- * t =  y0 - y1 +- SQRT(y*y0 - 2*y*y1 + y*y2 - y0*y2)  / (y0 - 2y1 +y2)
- * t =  - y1 +- SQRT(- 2*y*y1 + y)  / (- 2y1 + 1)
- * t =  y1 +- SQRT(y - 2*y*y1)  / (2y1 - 1)
- * t =  x1 +- SQRT(x - 2*x*x1)  / (2*x1 - 1)
- */
 
 const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
   const disc = b * b - 4 * a * c;
-
-  // if (disc < 0) return [null, null];
-
   const d = Math.sqrt(disc);
-
   return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
 };
 
@@ -88,14 +76,14 @@ const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
 
     const [t1, t2] = solveQuadEQ(a, b, c);
 
-    // const t = t1 >= 0 && t1 <= 1 ? t1 : t2;
-    const t = t1;
+    const t = t1 >= 0 && t1 <= 1 ? t1 : t2;
     const y = t * t * (1 - 2 * cp[1]) + 2 * t + cp[1];
 
     return y;
   };
 };
 const cubic: (a: Vec2, b: Vec2) => EasingFunc = (a, b) => {
+  todo();
   return function (t) {
     return t;
   };
@@ -113,6 +101,8 @@ const colorToRGBA = (color: string) => {
   const rgbstr = window.getComputedStyle(__dummyElm).color;
   return RGBA.fromStr(rgbstr);
 };
+
+type CubicCurve = [Vec2, Vec2, Vec2];
 
 export class JObject {
   _strokeStyle: RGBA = WHITE;
@@ -236,7 +226,6 @@ export class JObject {
     todo();
   }
 }
-type CubicCurve = [Vec2, Vec2, Vec2];
 export class Spline extends JObject {
   private curves: CubicCurve[];
 
@@ -443,9 +432,9 @@ export class SimplePropertyAnim extends JAnimation {
     this.runTimeMs += dt;
     const t = this.runTimeMs / this.durationMs;
 
-    this.updateProperty(this.easing(t));
+    this.updateProperty(this.easing(clamp(t)));
 
-    if (t > 1) {
+    if (this.runTimeMs > this.durationMs) {
       this.done = true;
     }
   }

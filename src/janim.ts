@@ -1,4 +1,4 @@
-const todo = () => {
+const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
 
@@ -284,6 +284,14 @@ export class Text extends JObject {
   }
   getFont() {
     return `${this.fontSize}px ${this.fontFamily}`;
+  }
+  setFontFamily(family: string) {
+    this.fontFamily = family;
+    return this;
+  }
+  setFontSize(size: number) {
+    this.fontSize = size;
+    return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
     ctx.font = this.getFont();
@@ -642,16 +650,18 @@ export class Sequence extends JAnimation {
 
 export class Scene {
   objects: JObject[] = [];
-  animationTree: JAnimation[] = [];
   selfCenter = false;
-  currAnimIndex = 0;
   runTimeMs = 0;
   done = false;
+  ctx: CanvasRenderingContext2D;
+  dt = 0;
 
-  constructor() {
-    this.construct();
+  constructor(ctx: CanvasRenderingContext2D) {
+    this.ctx = ctx;
   }
+
   add(obj: JObject) {
+    this.remove(obj);
     this.objects.push(obj);
   }
 
@@ -659,42 +669,55 @@ export class Scene {
     this.objects = this.objects.filter((it) => it != obj);
   }
 
-  play(anim: JAnimation) {
-    this.animationTree.push(anim);
+  mainLoop() {
+    this.construct();
+  }
+
+  async play(anim: JAnimation) {
+    return new Promise<void>((resolve) => {
+      let startTime = 0;
+      let dt = 0;
+      let prevT = 0;
+
+      const loop: FrameRequestCallback = (t) => {
+        dt = t - prevT;
+        prevT = t;
+
+        anim.step(dt);
+        this.render();
+
+        if (t - startTime < anim.durationMs) {
+          window.requestAnimationFrame(loop);
+        } else {
+          resolve();
+        }
+      };
+
+      window.requestAnimationFrame((t) => {
+        startTime = t;
+        prevT = startTime;
+
+        window.requestAnimationFrame(loop);
+      });
+    });
   }
 
   wait(durationMs = 1000) {
-    this.play(new Wait(durationMs));
-  }
-
-  stepAnimation(dt: number) {
-    this.runTimeMs += dt;
-
-    if (this.currAnimIndex >= this.animationTree.length) {
-      this.done = true;
-    }
-    if (this.done) return;
-
-    const currAnim = this.animationTree[this.currAnimIndex];
-    currAnim.step(dt);
-
-    if (currAnim.done) {
-      this.currAnimIndex++;
-    }
+    return this.play(new Wait(durationMs));
   }
 
   construct() {
     todo();
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    ctx.globalAlpha;
+  render() {
     if (this.selfCenter) {
-      ctx.translate(ctx.canvas.width / 2, ctx.canvas.height / 2);
+      this.ctx.translate(this.ctx.canvas.width / 2, this.ctx.canvas.height / 2);
     }
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    this.objects.forEach((obj) => obj.wrapedRender(ctx));
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+
+    this.objects.forEach((obj) => obj.wrapedRender(this.ctx));
   }
 }
 

@@ -262,6 +262,8 @@ export class VObject extends JObject {
   constructor() {
     super();
     this.curves = [];
+    this._strokeStyle = WHITE;
+    this._fillStyle = TRANSPARENT;
   }
   pos() {
     return this.curves[this.curves.length - 1][1];
@@ -433,20 +435,12 @@ export class Rectangle extends VObject {
     this.lineTo([left + r, top]);
   }
 }
-export class Polygon extends JObject {
+export class Polygon extends VObject {
   points: Vec2[];
   constructor(...points: Vec2[]) {
     super();
     this.points = points;
-  }
-
-  render(ctx: CanvasRenderingContext2D): void {
-    ctx.beginPath();
-    ctx.moveTo(this.points[0][0], this.points[0][1]);
-    this.points.forEach((point) => ctx.lineTo(point[0], point[1]));
-    ctx.lineTo(this.points[0][0], this.points[0][1]);
-    ctx.stroke();
-    ctx.fill();
+    this.points.forEach((p) => this.quadTo(p, p));
   }
 }
 export class Group extends JObject {
@@ -709,9 +703,10 @@ export class Sequence extends JAnimation {
   }
 
   private updateDurationMs() {
-    this.durationMs = this.anims
-      .map((anim) => anim.durationMs)
-      .reduce((p, r) => p + r, 0);
+    this.durationMs = this.anims.reduce(
+      (acc, anim) => acc + anim.durationMs,
+      0
+    );
   }
 
   add(...anims: JAnimation[]) {

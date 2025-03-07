@@ -18,25 +18,20 @@ class MyScene extends Scene {
       .Rectangle(200, 100)
       .translate(500, 250)
       .fill("#00ffff66")
-      .scale(2, 2);
-    this.add(s);
+      .scale(2, 2)
+      .rotateDeg(45);
+
+    const morph = jf.VMorph(c, s);
+    await this.play(morph);
 
     const p = jf
-      .Polygon([200, 200], [200, 400], [500, 400], [300, 150])
-      .translate(60, 100)
-      .fill("#ff000044");
-    this.add(p);
+      .Polygon([40, 100], [150, 120], [100, 300])
+      .translate(500, 250)
+      .fill("orange")
+      .scale(4, 4);
 
-    const l = jf.Spinner(s).repeat(10);
-    const ls = jf
-      .Sequence(
-        jf.Translate(c, null, [100, 100]).in(250).repeat(2),
-        jf.Translate(c, [100, 100], [200, 200]).in(250)
-      )
-      .repeat(10);
-
-    await this.play(ls);
-    await this.play(l);
+    const re = jf.VMorph(c, p);
+    await this.play(re);
   }
 }
 

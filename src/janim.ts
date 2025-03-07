@@ -257,7 +257,7 @@ export class JObject {
   }
 }
 export class VObject extends JObject {
-  private curves: Curve[];
+  curves: Curve[];
 
   constructor() {
     super();
@@ -569,7 +569,7 @@ export class Spinner extends SimplePropertyAnim {
   }
 
   protected updateProperty(t: number): void {
-    this.obj.setRotationDeg(lerpNum(t, this.from, this.to));
+    this.obj.setRotation(lerpNum(t, this.from, this.to));
   }
 }
 export class ColorMorph extends SimplePropertyAnim {
@@ -690,6 +690,45 @@ export class Morph extends Parallel {
       new Spinner(dest, source.rotation, dest.rotation),
       new ColorMorph(dest, source._fillStyle, dest._fillStyle),
       new FadeIn(dest, 0, 1)
+    );
+  }
+}
+export class ShapeMorph extends SimplePropertyAnim {
+  source: VObject;
+  dest: VObject;
+  private from: Curve[];
+
+  constructor(source: VObject, dest: VObject) {
+    super();
+    this.source = source;
+    this.dest = dest;
+
+    while (this.source.curves.length < this.dest.curves.length)
+      this.source.addDummyCurve();
+    while (this.dest.curves.length < this.source.curves.length)
+      this.dest.addDummyCurve();
+
+    this.from = this.source.curves;
+  }
+
+  protected updateProperty(t: number): void {
+    this.source.curves = lerpVObj(t, this.from, this.dest.curves);
+  }
+}
+export class VMorph extends Parallel {
+  source: VObject;
+  dest: VObject;
+
+  constructor(source: VObject, dest: VObject) {
+    super();
+    this.source = source;
+    this.dest = dest;
+
+    this.add(
+      new ShapeMorph(source, dest),
+      new Translate(source, source.translation, dest.translation),
+      new Spinner(source, source.rotation, dest.rotation),
+      new ColorMorph(source, source._fillStyle, dest._fillStyle)
     );
   }
 }
@@ -824,4 +863,6 @@ export const jf = {
   Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),
   Repeat: (...a: _CP<typeof Repeat>) => new Repeat(...a),
   Morph: (...a: _CP<typeof Morph>) => new Morph(...a),
+  ShapeMorph: (...a: _CP<typeof ShapeMorph>) => new ShapeMorph(...a),
+  VMorph: (...a: _CP<typeof VMorph>) => new VMorph(...a),
 };

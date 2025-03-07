@@ -30,7 +30,10 @@ class MyScene extends Scene {
         [0, 0],
       ]);
 
-    this.add(sp);
+    const c = jf.Circle(200).translate(300, 250).fill("#ffff0077");
+    this.add(c);
+
+    // this.add(sp);
   }
 }
 

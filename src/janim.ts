@@ -2,7 +2,15 @@ const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
 
-const DEBUG = 1;
+const { PI, tan, sin, cos } = Math;
+
+const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
+const polarToXY = (r: number, theta: number): Vec2 => [
+  r * cos(theta),
+  r * sin(theta),
+];
+
+const DEBUG = 0;
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
 
 export class RGBA {
@@ -108,6 +116,7 @@ const colorToRGBA = (color: string) => {
 export class JObject {
   _strokeStyle: RGBA = WHITE;
   _fillStyle: RGBA = TRANSPARENT;
+  strokeWidth = 1;
   translation: Vec2 = [0, 0];
   scaling: Vec2 = [1, 1];
   rotation = 0;
@@ -193,7 +202,7 @@ export class JObject {
     return this;
   }
   rotateDeg(angle: number) {
-    this.rotate((angle * Math.PI) / 180);
+    this.rotate((angle * PI) / 180);
     return this;
   }
   setRotation(angle: number) {
@@ -201,7 +210,12 @@ export class JObject {
     return this;
   }
   setRotationDeg(angle: number) {
-    this.setRotation((angle * Math.PI) / 180);
+    this.setRotation((angle * PI) / 180);
+    return this;
+  }
+
+  setStrokeWidth(w: number) {
+    this.strokeWidth = w;
     return this;
   }
 
@@ -210,6 +224,7 @@ export class JObject {
     const originalAlpha = ctx.globalAlpha;
 
     ctx.strokeStyle = this.strokeStyle;
+    ctx.lineWidth = this.strokeWidth;
     ctx.fillStyle = this.fillStyle;
     ctx.globalAlpha = this.opacity;
 
@@ -260,26 +275,9 @@ export class VObject extends JObject {
     return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = "red";
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 2;
-
-    const topLeft = [Infinity, Infinity];
-    const bottomRight = [-Infinity, -Infinity];
-
-    this.curves.forEach((c) => {
-      topLeft[0] = Math.min(topLeft[0], c[2][0]);
-      topLeft[1] = Math.min(topLeft[1], c[2][1]);
-
-      bottomRight[0] = Math.max(bottomRight[0], c[2][0]);
-      bottomRight[1] = Math.max(bottomRight[1], c[2][1]);
-    });
-
-    const width = bottomRight[0] - topLeft[0];
-    const height = bottomRight[1] - topLeft[1];
-
+    const startPoint = this.curves[this.curves.length - 1][2];
     ctx.beginPath();
-    ctx.moveTo(0, 0);
+    ctx.moveTo(startPoint[0], startPoint[1]);
 
     this.curves.forEach((curve) => {
       ctx.bezierCurveTo(
@@ -291,7 +289,7 @@ export class VObject extends JObject {
         curve[2][1]
       );
     });
-    ctx.lineTo(0, 0);
+    ctx.lineTo(startPoint[0], startPoint[1]);
 
     ctx.stroke();
     ctx.fill();
@@ -299,19 +297,19 @@ export class VObject extends JObject {
     if (DEBUG) {
       this.curves.forEach(([c1, c2, c], i) => {
         ctx.beginPath();
-        ctx.arc(c1[0], c1[1], 5, 0, 2 * Math.PI);
+        ctx.arc(c1[0], c1[1], 5, 0, 2 * PI);
         ctx.stroke();
         ctx.fill();
         ctx.beginPath();
 
         ctx.beginPath();
-        ctx.arc(c2[0], c2[1], 5, 0, 2 * Math.PI);
+        ctx.arc(c2[0], c2[1], 5, 0, 2 * PI);
         ctx.stroke();
         ctx.fill();
         ctx.beginPath();
 
         ctx.beginPath();
-        ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
+        ctx.arc(c[0], c[1], 5, 0, 2 * PI);
         ctx.stroke();
         ctx.fill();
         ctx.beginPath();
@@ -361,19 +359,27 @@ export class Text extends JObject {
     }
   }
 }
-export class Circle extends JObject {
-  r: number;
+export class Circle extends VObject {
+  private r: number;
 
   constructor(r: number) {
     super();
     this.r = r;
-  }
 
-  render(ctx: CanvasRenderingContext2D): void {
-    ctx.beginPath();
-    ctx.arc(0, 0, this.r, 0, Math.PI * 2, true);
-    ctx.stroke();
-    ctx.fill();
+    const detail = 8;
+    /**
+     * @link https://stackoverflow.com/a/27863181
+     */
+    const optimalDist = (4 / 3) * tan(PI / (2 * detail));
+    const optimalRad = Math.sqrt(optimalDist ** 2 + 1) * this.r;
+
+    range(detail).forEach((a) => {
+      this.cubicTo(
+        polarToXY(optimalRad, (PI * 2 * (3 * a + 1)) / (3 * detail)),
+        polarToXY(optimalRad, (PI * 2 * (3 * a + 2)) / (3 * detail)),
+        polarToXY(this.r, (2 * PI * (a + 1)) / detail)
+      );
+    });
   }
 }
 export class Rectangle extends JObject {

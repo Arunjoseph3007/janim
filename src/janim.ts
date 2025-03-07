@@ -1,3 +1,5 @@
+const DEBUG = 0;
+
 const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
@@ -5,12 +7,12 @@ const todo = (): never => {
 const { PI, tan, sin, cos } = Math;
 
 const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
+
 const polarToXY = (r: number, theta: number): Vec2 => [
   r * cos(theta),
   r * sin(theta),
 ];
 
-const DEBUG = 0;
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
 
 export class RGBA {
@@ -49,11 +51,12 @@ const WHITE = new RGBA(1, 1, 1);
 const TRANSPARENT = new RGBA(1, 1, 0);
 
 type Vec2 = [number, number];
+type Curve = [Vec2, Vec2, Vec2];
 type TLerpFunc<T> = (t: number, a: T, b: T) => T;
-enum ColorMorphMode {
-  Stroke,
-  Fill,
-  StrokeAndFill,
+enum ColoringMode {
+  StrokeOnly = "StrokeOnly",
+  FillOnly = "FillOnly",
+  StrokeAndFill = "StrokeAndFill",
 }
 
 const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
@@ -68,11 +71,22 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.b, b.b),
     lerpNum(t, a.a, b.a)
   );
+const lerpCurve: TLerpFunc<Curve> = (t, a, b) => [
+  lerpVec2(t, a[0], b[0]),
+  lerpVec2(t, a[1], b[1]),
+  lerpVec2(t, a[2], b[2]),
+];
+const lerpVObj: TLerpFunc<Curve[]> = (t, a, b) => {
+  console.assert(a.length == b.length, "Can only lerp object of equal length");
+
+  return range(a.length).map((i) => lerpCurve(t, a[i], b[i]));
+};
 
 const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
 
 const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
   const disc = b * b - 4 * a * c;
+  console.assert(disc > 0, "No real roots of equation");
   const d = Math.sqrt(disc);
   return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
 };
@@ -242,7 +256,6 @@ export class JObject {
     todo();
   }
 }
-type Curve = [Vec2, Vec2, Vec2];
 export class VObject extends JObject {
   private curves: Curve[];
 
@@ -260,6 +273,11 @@ export class VObject extends JObject {
   addCurves(...curves: Curve[]) {
     curves.forEach((p) => this.addCurve(p));
     return this;
+  }
+  addDummyCurve() {
+    // Splatting just to make copy
+    const pos = this.pos();
+    this.addCurve([[...pos], [...pos], [...pos]]);
   }
   lineTo(point: Vec2) {
     const mid = midpoint(this.pos(), point);
@@ -321,14 +339,14 @@ export class VObject extends JObject {
 }
 export class Text extends JObject {
   text: string;
-  mode: ColorMorphMode;
+  mode: ColoringMode;
   maxWidth?: number;
   fontFamily: string;
   fontSize: number;
   constructor(text: string) {
     super();
     this.text = text;
-    this.mode = ColorMorphMode.StrokeAndFill;
+    this.mode = ColoringMode.StrokeAndFill;
     this.fontFamily = "monospace";
     this.fontSize = 40;
 
@@ -349,11 +367,11 @@ export class Text extends JObject {
   render(ctx: CanvasRenderingContext2D): void {
     ctx.font = this.getFont();
 
-    if (this.mode == ColorMorphMode.Fill) {
+    if (this.mode == ColoringMode.FillOnly) {
       ctx.fillText(this.text, 0, 0, this.maxWidth);
-    } else if (this.mode == ColorMorphMode.Stroke) {
+    } else if (this.mode == ColoringMode.StrokeOnly) {
       ctx.strokeText(this.text, 0, 0, this.maxWidth);
-    } else if (this.mode == ColorMorphMode.StrokeAndFill) {
+    } else if (this.mode == ColoringMode.StrokeAndFill) {
       ctx.fillText(this.text, 0, 0, this.maxWidth);
       ctx.strokeText(this.text, 0, 0, this.maxWidth);
     }
@@ -382,7 +400,7 @@ export class Circle extends VObject {
     });
   }
 }
-export class Rectangle extends JObject {
+export class Rectangle extends VObject {
   w: number;
   h: number;
   rounding: number;
@@ -391,24 +409,28 @@ export class Rectangle extends JObject {
     super();
     this.w = w;
     this.h = h;
-    this.rounding = 2;
+    this.rounding = 20;
+
+    this.computeSpline();
   }
 
-  render(ctx: CanvasRenderingContext2D): void {
-    ctx.beginPath();
-    const left = -this.w / 2;
+  private computeSpline() {
     const top = -this.h / 2;
-    ctx.moveTo(left + this.rounding, top);
+    const left = -this.w / 2;
     const r = this.rounding;
-    // prettier-ignore
-    {
-      ctx.arcTo(left + this.w,  top,          left + this.w,      top + r,          r);
-      ctx.arcTo(left + this.w,  top + this.h, left + this.w - r,  top + this.h,     r);
-      ctx.arcTo(left,           top + this.h, left,               top + this.h - r, r);
-      ctx.arcTo(left,           top,          left + r,           top,              r);
-    }
-    ctx.stroke();
-    ctx.fill();
+
+    // TODO instead of arcing
+    this.quadTo([left, top], [left, top + r]);
+    this.lineTo([left, top + this.h - this.rounding]);
+    this.quadTo([left, top + this.h], [left + r, top + this.h]);
+    this.lineTo([left + this.w - r, top + this.h]);
+    this.quadTo(
+      [left + this.w, top + this.h],
+      [left + this.w, top + this.h - r]
+    );
+    this.lineTo([left + this.w, top + r]);
+    this.quadTo([left + this.w, top], [left + this.w - r, top]);
+    this.lineTo([left + r, top]);
   }
 }
 export class Polygon extends JObject {
@@ -560,13 +582,13 @@ export class ColorMorph extends SimplePropertyAnim {
   obj: JObject;
   from: RGBA;
   to: RGBA;
-  mode: ColorMorphMode;
+  mode: ColoringMode;
 
   constructor(
     obj: JObject,
     from: RGBA | string | null,
     to: RGBA | string,
-    mode = ColorMorphMode.StrokeAndFill
+    mode = ColoringMode.StrokeAndFill
   ) {
     super();
     this.obj = obj;
@@ -583,14 +605,14 @@ export class ColorMorph extends SimplePropertyAnim {
     const color = lerpRgba(t, this.from, this.to);
 
     switch (this.mode) {
-      case ColorMorphMode.Fill:
+      case ColoringMode.FillOnly:
         this.obj._fillStyle = color;
 
         break;
-      case ColorMorphMode.Stroke:
+      case ColoringMode.StrokeOnly:
         this.obj._strokeStyle = color;
         break;
-      case ColorMorphMode.StrokeAndFill:
+      case ColoringMode.StrokeAndFill:
         this.obj._strokeStyle = color;
         this.obj._fillStyle = color;
         break;

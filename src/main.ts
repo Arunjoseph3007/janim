@@ -11,29 +11,15 @@ class MyScene extends Scene {
   }
 
   async construct() {
-    const sp = jf
-      .VObject()
-      .translate(120, 120)
-      .addCurve([
-        [-40, 40],
-        [-40, 40],
-        [20, 180],
-      ])
-      .addCurve([
-        [90, 220],
-        [90, 220],
-        [250, 60],
-      ])
-      .addCurve([
-        [80, -80],
-        [80, -80],
-        [0, 0],
-      ]);
-
     const c = jf.Circle(200).translate(300, 250).fill("#ffff0077");
-    this.add(c);
+    // this.add(c);
 
-    // this.add(sp);
+    const s = jf
+      .Rectangle(200, 100)
+      .translate(500, 250)
+      .fill("#00ffff66")
+      .scale(2, 2)
+    this.add(s);
   }
 }
 

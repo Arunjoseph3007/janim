@@ -1,5 +1,5 @@
 import { Font } from "./font";
-import { Vec2, TLerpFunc, Curve, ColoringMode, EasingFunc } from "./types";
+import { Vec2, TLerpFunc, CubicCurve, ColoringMode, EasingFunc } from "./types";
 
 const DEBUG = 0;
 
@@ -82,12 +82,13 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.b, b.b),
     lerpNum(t, a.a, b.a)
   );
-const lerpCurve: TLerpFunc<Curve> = (t, a, b) => [
+const lerpCurve: TLerpFunc<CubicCurve> = (t, a, b) => [
   lerpVec2(t, a[0], b[0]),
   lerpVec2(t, a[1], b[1]),
   lerpVec2(t, a[2], b[2]),
+  lerpVec2(t, a[3], b[3]),
 ];
-const lerpVObj: TLerpFunc<Curve[]> = (t, a, b) => {
+const lerpVObj: TLerpFunc<CubicCurve[]> = (t, a, b) => {
   console.assert(a.length == b.length, "Can only lerp object of equal length");
 
   return range(a.length).map((i) => lerpCurve(t, a[i], b[i]));
@@ -267,7 +268,7 @@ export class JObject {
   }
 }
 export class VObject extends JObject {
-  curves: Curve[];
+  curves: CubicCurve[];
 
   constructor() {
     super();
@@ -275,48 +276,50 @@ export class VObject extends JObject {
     this._strokeStyle = WHITE;
     this._fillStyle = TRANSPARENT;
   }
-  pos() {
-    return this.curves[this.curves.length - 1][2];
+  pos(): Vec2 {
+    if (this.curves.length == 0) return [0, 0];
+    return this.curves[this.curves.length - 1][3];
   }
-  addCurve(curve: Curve) {
+  addCurve(curve: CubicCurve) {
     this.curves.push(curve);
     return this;
   }
-  addCurves(...curves: Curve[]) {
+  addCurves(...curves: CubicCurve[]) {
     curves.forEach((p) => this.addCurve(p));
     return this;
   }
   addDummyCurve() {
     // Splatting just to make copy
     const pos = this.pos();
-    this.addCurve([[...pos], [...pos], [...pos]]);
+    this.addCurve([[...pos], [...pos], [...pos], [...pos]]);
   }
   lineTo(point: Vec2) {
     const mid = midpoint(this.pos(), point);
-    this.addCurve([mid, mid, point]);
+    this.addCurve([[...this.pos()], mid, mid, point]);
     return this;
   }
   cubicTo(c1: Vec2, c2: Vec2, c: Vec2) {
-    this.addCurve([c1, c2, c]);
+    this.addCurve([[...this.pos()], c1, c2, c]);
     return this;
   }
   quadTo(control: Vec2, point: Vec2) {
-    this.addCurve([control, control, point]);
+    this.addCurve([[...this.pos()], control, control, point]);
     return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    const startPoint = this.curves[this.curves.length - 1][2];
+    const startPoint = this.curves[0][0];
     ctx.beginPath();
     ctx.moveTo(startPoint[0], startPoint[1]);
 
     this.curves.forEach((curve) => {
+      ctx.lineTo(curve[0][0], curve[0][1]);
       ctx.bezierCurveTo(
-        curve[0][0],
-        curve[0][1],
         curve[1][0],
         curve[1][1],
         curve[2][0],
-        curve[2][1]
+        curve[2][1],
+        curve[3][0],
+        curve[3][1]
       );
     });
     ctx.lineTo(startPoint[0], startPoint[1]);
@@ -404,11 +407,12 @@ export class Circle extends VObject {
     const optimalRad = Math.sqrt(optimalDist ** 2 + 1) * this.r;
 
     range(detail).forEach((a) => {
-      this.cubicTo(
+      this.addCurve([
+        polarToXY(this.r, (PI * 2 * (3 * a + 0)) / (3 * detail)),
         polarToXY(optimalRad, (PI * 2 * (3 * a + 1)) / (3 * detail)),
         polarToXY(optimalRad, (PI * 2 * (3 * a + 2)) / (3 * detail)),
-        polarToXY(this.r, (2 * PI * (a + 1)) / detail)
-      );
+        polarToXY(this.r, (PI * 2 * (3 * a + 3)) / (3 * detail)),
+      ]);
     });
   }
 }
@@ -432,7 +436,12 @@ export class Rectangle extends VObject {
     const r = this.rounding;
 
     // TODO instead of arcing
-    this.quadTo([left, top], [left, top + r]);
+    this.addCurve([
+      [left + r, top],
+      [left, top],
+      [left, top],
+      [left, top + r],
+    ]);
     this.lineTo([left, top + this.h - this.rounding]);
     this.quadTo([left, top + this.h], [left + r, top + this.h]);
     this.lineTo([left + this.w - r, top + this.h]);
@@ -450,6 +459,12 @@ export class Polygon extends VObject {
   constructor(...points: Vec2[]) {
     super();
     this.points = points;
+    this.addCurve([
+      this.points[0],
+      this.points[0],
+      this.points[0],
+      this.points[0],
+    ]);
     this.points.forEach((p) => this.quadTo(p, p));
   }
 }
@@ -464,17 +479,6 @@ export class Letter extends VObject {
     const code = this.char.charCodeAt(0);
     const glyphId = this.font.cmapTable.getGlyphId(code);
     const glyph = this.font.glyphs[glyphId];
-
-    this.quadTo([0, 0], [0, 0]);
-    range(glyph.points.length).forEach((i) => {
-      const p = glyph.points[i];
-
-      const flag = glyph.flags[i];
-
-      const onCurve = isNthBitOn(flag, 0);
-
-      this.lineTo(p);
-    });
   }
 }
 export class Group extends JObject {
@@ -730,7 +734,7 @@ export class Morph extends Parallel {
 export class ShapeMorph extends SimplePropertyAnim {
   source: VObject;
   dest: VObject;
-  private from: Curve[];
+  private from: CubicCurve[];
 
   constructor(source: VObject, dest: VObject) {
     super();

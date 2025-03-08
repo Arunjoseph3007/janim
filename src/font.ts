@@ -1,4 +1,4 @@
-import { Vec2 } from "./types";
+import { CubicCurve, Vec2 } from "./types";
 /**
  * @link https://github.com/Arunjoseph3007/fontsa/tree/main
  */
@@ -175,6 +175,53 @@ class SimpleGlyph {
     const points: Vec2[] = xCoords.map((x, i) => [x, yCoords[i]]);
 
     return new SimpleGlyph(numberOfContours, endPtsOfContours, flags, points);
+  }
+
+  getCurves(): CubicCurve[] {
+    // this.quadTo(glyph.points[0], glyph.points[0]);
+    // // const lastPoint = glyph.points[glyph.points.length-1]
+    // // const lastPoint = glyph.points[glyph.endPtsOfContours[0]]
+    // // this.quadTo(lastPoint,lastPoint);
+
+    // let index = 0;
+    // glyph.endPtsOfContours.forEach((length) => {
+    //   let tmpCurve: Vec2[] = [];
+    //   for (; index < length; index++) {
+    //     const p = glyph.points[index];
+    //     const flag = glyph.flags[index];
+    //     const onCurve = isNthBitOn(flag, 0);
+
+    //     if (!onCurve) {
+    //       tmpCurve.push(p);
+    //     } else if (tmpCurve.length == 1) {
+    //       this.lineTo(p);
+    //       tmpCurve = [];
+    //     } else if (tmpCurve.length > 1) {
+    //       tmpCurve.push(p);
+    //       {
+    //         let start = tmpCurve[0];
+    //         for (let j = 0; j < tmpCurve.length - 2; j++) {
+    //           const cp = midpoint(tmpCurve[j], tmpCurve[j + 2]);
+    //           this.cubicTo(start, tmpCurve[j], cp);
+    //           start = cp;
+    //         }
+
+    //         this.cubicTo(
+    //           start,
+    //           tmpCurve[tmpCurve.length - 2],
+    //           tmpCurve[tmpCurve.length - 1]
+    //         );
+    //       }
+
+    //       tmpCurve = [p];
+    //     } else {
+    //       console.assert(false, "Unreachanle");
+    //       tmpCurve.push(p);
+    //     }
+    //   }
+    // });
+
+    return [];
   }
 
   transform(scaleX: number, scaleY: number, offsetX: number, offsetY: number) {

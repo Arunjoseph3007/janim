@@ -1,3 +1,4 @@
+import { Font } from "./font";
 import { Easings, Scene, jf } from "./janim";
 import "./style.css";
 
@@ -49,6 +50,9 @@ async function main() {
   }
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
+  const f = await Font.fromURI("JetBrainsMono.ttf");
+
+  console.log(f);
 
   const sc = new MyScene(ctx);
   sc.mainLoop();

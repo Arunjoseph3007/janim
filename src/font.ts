@@ -4,15 +4,12 @@
 
 /**
  */
-class BinaryFileReader {
-  file: string;
+class BinaryReader {
   buf: Uint8Array;
   index: number;
 
-  constructor(file: string) {
-    this.file = file;
-    // @ts-ignore
-    this.buf = new Uint8Array(require("fs").readFileSync(file));
+  constructor(buf: Uint8Array) {
+    this.buf = buf;
     this.index = 0;
   }
 
@@ -114,7 +111,7 @@ class SimpleGlyph {
   }
 
   static fromReader(
-    reader: BinaryFileReader,
+    reader: BinaryReader,
     numberOfContours: number
   ): SimpleGlyph {
     reader.parseInt16(); // xMin
@@ -255,7 +252,7 @@ class CmapTable {
   glyphIndexMap: Record<number, number> = {};
   segCount: number;
 
-  constructor(reader: BinaryFileReader) {
+  constructor(reader: BinaryReader) {
     reader.parseUint16(); // version
     const numberSubtables = reader.parseUint16();
     const encodingRecords: EncodingRecord[] = [];
@@ -354,8 +351,8 @@ export class Font {
   locaTable: number[] = [];
   glyphs: SimpleGlyph[] = [];
 
-  constructor(file: string) {
-    const reader = new BinaryFileReader(file);
+  constructor(buff: Uint8Array) {
+    const reader = new BinaryReader(buff);
 
     this.parseFontDirectory(reader);
     this.parseHeadTable(reader);
@@ -366,7 +363,13 @@ export class Font {
     this.parseHmtxTable(reader);
   }
 
-  parseFontDirectory(reader: BinaryFileReader): void {
+  static async fromURI(uri: string): Promise<Font> {
+    const res = await fetch(uri);
+    const buff = await res.bytes();
+    return new Font(buff);
+  }
+
+  parseFontDirectory(reader: BinaryReader): void {
     reader.parseUint32(); // sfntVersion
     const numTables = reader.parseUint16();
     reader.parseUint16(); // searchRange
@@ -383,19 +386,19 @@ export class Font {
     }
   }
 
-  gotoTable(tableName: string, reader: BinaryFileReader): TableRecord {
+  gotoTable(tableName: string, reader: BinaryReader): TableRecord {
     const tableRecord = this.fontDirectory[tableName];
     if (!tableRecord) throw new Error(`${tableName} Table not found`);
     reader.goto(tableRecord.offset);
     return tableRecord;
   }
 
-  parseCmapTable(reader: BinaryFileReader): void {
+  parseCmapTable(reader: BinaryReader): void {
     this.gotoTable("cmap", reader);
     this.cmapTable = new CmapTable(reader);
   }
 
-  parseMaxpTable(reader: BinaryFileReader): void {
+  parseMaxpTable(reader: BinaryReader): void {
     this.gotoTable("maxp", reader);
     this.maxpTable = new MaxpTable(
       reader.parseUint32(),
@@ -416,7 +419,7 @@ export class Font {
     );
   }
 
-  parseHeadTable(reader: BinaryFileReader): void {
+  parseHeadTable(reader: BinaryReader): void {
     this.gotoTable("head", reader);
     this.headTable = new HeadTable(
       reader.parseUint16(),
@@ -440,7 +443,7 @@ export class Font {
     );
   }
 
-  parseLocaTable(reader: BinaryFileReader): void {
+  parseLocaTable(reader: BinaryReader): void {
     this.gotoTable("loca", reader);
     const isShort = this.headTable.indexToLocFormat === 0;
 
@@ -452,7 +455,7 @@ export class Font {
     reader.parseUint16(); // Read endAddress
   }
 
-  parseGlyphTable(reader: BinaryFileReader): void {
+  parseGlyphTable(reader: BinaryReader): void {
     const glyfTableRecord = this.gotoTable("glyf", reader);
 
     for (const offset of this.locaTable) {
@@ -462,15 +465,16 @@ export class Font {
     }
   }
 
-  parseGlyph(reader: BinaryFileReader, loc: number): SimpleGlyph {
+  parseGlyph(reader: BinaryReader, loc: number): SimpleGlyph {
     reader.goto(loc);
     const numContours = reader.parseInt16();
-    return numContours >= 0
+    const isSimple = numContours >= 0;
+    return isSimple
       ? SimpleGlyph.fromReader(reader, numContours)
       : this.parseCompoundGlyph(reader);
   }
 
-  parseCompoundGlyph(reader: BinaryFileReader): SimpleGlyph {
+  parseCompoundGlyph(reader: BinaryReader): SimpleGlyph {
     const compGlyph = new SimpleGlyph(0, [], [], []);
     reader.parseInt16(); // xMin
     reader.parseInt16(); // yMin
@@ -478,35 +482,59 @@ export class Font {
     reader.parseInt16(); // yMax
 
     let hasMoreComponents = 1;
+    let p = 0;
     while (hasMoreComponents) {
       const flags = reader.parseUint16();
-      const glyphIndex = reader.parseUint16();
       hasMoreComponents = flags & (1 << 5);
+      const glyphIndex = reader.parseUint16();
+      const argsAreWord = flags & 1;
+      const areSignedValues = flags & (1 << 1);
+      const hasAScale = flags & (1 << 3);
+      const hasXYScale = flags & (1 << 6);
+      const has2by2 = flags & (1 << 7);
 
-      const scaleX = 1.0,
-        scaleY = 1.0;
-      let offsetX = 0.0,
-        offsetY = 0.0;
+      let scaleX = 1.0;
+      let scaleY = 1.0;
+      let offsetX = 0.0;
+      let offsetY = 0.0;
 
-      if (flags & (1 << 1)) {
-        offsetX = flags & 1 ? reader.parseInt16() : reader.parseInt8();
-        offsetY = flags & 1 ? reader.parseInt16() : reader.parseInt8();
+      if (areSignedValues) {
+        offsetX = argsAreWord ? reader.parseInt16() : reader.parseInt8();
+        offsetY = argsAreWord ? reader.parseInt16() : reader.parseInt8();
       }
 
+      if (hasAScale) {
+        scaleX = scaleY = reader.parseInt16();
+      } else if (hasXYScale) {
+        scaleX = reader.parseInt16();
+        scaleY = reader.parseInt16();
+      } else if (has2by2) {
+        reader.parseInt16();
+        reader.parseInt16();
+        reader.parseInt16();
+        reader.parseInt16();
+      }
+
+      p++;
+      const curLoc = reader.index;
       const compLoc =
         this.fontDirectory["glyf"].offset + this.locaTable[glyphIndex];
       const glyphComponent = this.parseGlyph(reader, compLoc);
       glyphComponent.transform(scaleX, scaleY, offsetX, offsetY);
+      reader.goto(curLoc);
 
+      const currentTotalPoints = compGlyph.points.length;
       compGlyph.numberOfContours += glyphComponent.numberOfContours;
       compGlyph.flags.push(...glyphComponent.flags);
       compGlyph.points.push(...glyphComponent.points);
-      compGlyph.endPtsOfContours.push(...glyphComponent.endPtsOfContours);
+      compGlyph.endPtsOfContours.push(
+        ...glyphComponent.endPtsOfContours.map((p) => p + currentTotalPoints)
+      );
     }
     return compGlyph;
   }
 
-  parseHmtxTable(reader: BinaryFileReader): void {
+  parseHmtxTable(reader: BinaryReader): void {
     this.gotoTable("hhea", reader);
     reader.skip(34);
     const numOfLongHorMetrics = reader.parseUint16();

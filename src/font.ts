@@ -1,3 +1,4 @@
+import { Vec2 } from "./types";
 /**
  * @link https://github.com/Arunjoseph3007/fontsa/tree/main
  */
@@ -95,13 +96,13 @@ class SimpleGlyph {
   numberOfContours: number;
   endPtsOfContours: number[];
   flags: Uint8Array[];
-  points: [number, number][];
+  points: Vec2[];
 
   constructor(
     numberOfContours: number,
     endPtsOfContours: number[],
     flags: Uint8Array[],
-    points: [number, number][]
+    points: Vec2[]
   ) {
     this.isCompound = false;
     this.numberOfContours = numberOfContours;
@@ -171,7 +172,7 @@ class SimpleGlyph {
       yCoords.push(yAcc);
     }
 
-    const points: [number, number][] = xCoords.map((x, i) => [x, yCoords[i]]);
+    const points: Vec2[] = xCoords.map((x, i) => [x, yCoords[i]]);
 
     return new SimpleGlyph(numberOfContours, endPtsOfContours, flags, points);
   }
@@ -322,15 +323,15 @@ class CmapTable {
 }
 
 class HmtxTable {
-  hMetrics: [number, number][];
+  hMetrics: Vec2[];
   leftSideBearings: number[];
 
-  constructor(hMetrics: [number, number][], leftSideBearings: number[]) {
+  constructor(hMetrics: Vec2[], leftSideBearings: number[]) {
     this.hMetrics = hMetrics;
     this.leftSideBearings = leftSideBearings;
   }
 
-  getMetric(idx: number): [number, number] {
+  getMetric(idx: number): Vec2 {
     if (idx < this.hMetrics.length) {
       return this.hMetrics[idx];
     } else {
@@ -540,7 +541,7 @@ export class Font {
     const numOfLongHorMetrics = reader.parseUint16();
     this.gotoTable("hmtx", reader);
 
-    const hMetrics: [number, number][] = [],
+    const hMetrics: Vec2[] = [],
       leftSideBearings: number[] = [];
     for (let i = 0; i < numOfLongHorMetrics; i++) {
       hMetrics.push([reader.parseUint16(), reader.parseInt16()]);

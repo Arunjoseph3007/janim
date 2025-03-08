@@ -1,5 +1,4 @@
-import { Font } from "./font";
-import { Easings, Scene, jf } from "./janim";
+import { Scene, jf, loadFontFromUri } from "./janim";
 import "./style.css";
 
 const FACTOR = 70;
@@ -12,27 +11,41 @@ class MyScene extends Scene {
   }
 
   async construct() {
-    const c = jf.Circle(200).translate(300, 250).fill("#ffff0077");
-    this.add(c);
+    new Array(26)
+      .fill(0)
+      .map((_, i) => [i + 65, i + 97])
+      .flat()
+      .map((i) => String.fromCharCode(i))
+      .map((c, i) =>
+        jf
+          .Letter(c, "JetBrainsMono")
+          .translateX((i % 10) * 100 + 80)
+          .translateY(Math.floor(i / 10) * 100 + 80)
+          .scale(0.05, -0.05)
+          .fill("pink")
+          .stroke("orange")
+          .setStrokeWidth(40)
+      )
+      .forEach((o) => this.add(o));
 
-    const s = jf
-      .Rectangle(200, 100)
-      .translate(500, 250)
-      .fill("#00ffff66")
-      .scale(2, 2)
-      .rotateDeg(45);
+    // const s = jf
+    //   .Rectangle(200, 100)
+    //   .translate(500, 250)
+    //   .fill("#00ffff66")
+    //   .scale(2, 2)
+    //   .rotateDeg(45);
 
-    const morph = jf.VMorph(c, s);
-    await this.play(morph);
+    // const morph = jf.VMorph(c, s);
+    // await this.play(morph);
 
-    const p = jf
-      .Polygon([40, 100], [150, 120], [100, 300])
-      .translate(500, 250)
-      .fill("orange")
-      .scale(4, 4);
+    // const p = jf
+    //   .Polygon([40, 100], [150, 120], [100, 300])
+    //   .translate(500, 250)
+    //   .fill("orange")
+    //   .scale(4, 4);
 
-    const re = jf.VMorph(c, p);
-    await this.play(re);
+    // const re = jf.VMorph(c, p);
+    // await this.play(re);
   }
 }
 
@@ -50,9 +63,7 @@ async function main() {
   }
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
-  const f = await Font.fromURI("JetBrainsMono.ttf");
-
-  console.log(f);
+  await loadFontFromUri("JetBrainsMono", "JetBrainsMono.ttf");
 
   const sc = new MyScene(ctx);
   sc.mainLoop();

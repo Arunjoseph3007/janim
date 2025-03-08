@@ -1,7 +1,18 @@
+import { Font } from "./font";
+import { Vec2, TLerpFunc, Curve, ColoringMode, EasingFunc } from "./types";
+
 const DEBUG = 0;
 
 const todo = (): never => {
   throw new Error("TODO: not implmented yet");
+};
+
+const loadedFonts: Record<string, Font> = {};
+export const loadFont = (name: string, font: Font) => {
+  loadedFonts[name] = font;
+};
+export const loadFontFromUri = async (name: string, uri: string) => {
+  loadFont(name, await Font.fromURI(uri));
 };
 
 const { PI, tan, sin, cos } = Math;
@@ -12,6 +23,15 @@ const polarToXY = (r: number, theta: number): Vec2 => [
   r * cos(theta),
   r * sin(theta),
 ];
+
+const isNthBitOn = (
+  word: Uint8Array<ArrayBufferLike>,
+  index: number
+): boolean => {
+  const wordNo = Math.floor(index / 8);
+  const bitNo = index % 8;
+  return ((word[wordNo] >> bitNo) & 1) == 1;
+};
 
 const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
 
@@ -50,15 +70,6 @@ export class RGBA {
 const WHITE = new RGBA(1, 1, 1);
 const TRANSPARENT = new RGBA(1, 1, 0);
 
-type Vec2 = [number, number];
-type Curve = [Vec2, Vec2, Vec2];
-type TLerpFunc<T> = (t: number, a: T, b: T) => T;
-enum ColoringMode {
-  StrokeOnly = "StrokeOnly",
-  FillOnly = "FillOnly",
-  StrokeAndFill = "StrokeAndFill",
-}
-
 const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
 const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
   lerpNum(t, a[0], b[0]),
@@ -91,7 +102,6 @@ const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
   return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
 };
 
-type EasingFunc = (t: number) => number;
 const linear: EasingFunc = (t) => t;
 const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
   return function (x) {
@@ -266,7 +276,7 @@ export class VObject extends JObject {
     this._fillStyle = TRANSPARENT;
   }
   pos() {
-    return this.curves[this.curves.length - 1][1];
+    return this.curves[this.curves.length - 1][2];
   }
   addCurve(curve: Curve) {
     this.curves.push(curve);
@@ -441,6 +451,30 @@ export class Polygon extends VObject {
     super();
     this.points = points;
     this.points.forEach((p) => this.quadTo(p, p));
+  }
+}
+export class Letter extends VObject {
+  char: string;
+  font: Font;
+  constructor(char: string, font: string) {
+    super();
+    this.char = char;
+    this.font = loadedFonts[font];
+
+    const code = this.char.charCodeAt(0);
+    const glyphId = this.font.cmapTable.getGlyphId(code);
+    const glyph = this.font.glyphs[glyphId];
+
+    this.quadTo([0, 0], [0, 0]);
+    range(glyph.points.length).forEach((i) => {
+      const p = glyph.points[i];
+
+      const flag = glyph.flags[i];
+
+      const onCurve = isNthBitOn(flag, 0);
+
+      this.lineTo(p);
+    });
   }
 }
 export class Group extends JObject {
@@ -853,6 +887,7 @@ export const jf = {
   Group: (...a: _CP<typeof Group>) => new Group(...a),
   VObject: (...a: _CP<typeof VObject>) => new VObject(...a),
   Text: (...a: _CP<typeof Text>) => new Text(...a),
+  Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),

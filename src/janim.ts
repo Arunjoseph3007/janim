@@ -1,5 +1,13 @@
 import { Font } from "./font";
-import { Vec2, TLerpFunc, CubicCurve, ColoringMode, EasingFunc } from "./types";
+import {
+  Vec2,
+  TLerpFunc,
+  CubicCurve,
+  ColoringMode,
+  EasingFunc,
+  Contour,
+  GlpyhData,
+} from "./types";
 
 const DEBUG = 0;
 
@@ -88,10 +96,15 @@ const lerpCurve: TLerpFunc<CubicCurve> = (t, a, b) => [
   lerpVec2(t, a[2], b[2]),
   lerpVec2(t, a[3], b[3]),
 ];
-const lerpVObj: TLerpFunc<CubicCurve[]> = (t, a, b) => {
+const lerpContour: TLerpFunc<Contour> = (t, a, b) => {
   console.assert(a.length == b.length, "Can only lerp object of equal length");
 
   return range(a.length).map((i) => lerpCurve(t, a[i], b[i]));
+};
+const lerpGlyph: TLerpFunc<GlpyhData> = (t, a, b) => {
+  console.assert(a.length == b.length, "Can only lerp object of equal length");
+
+  return range(a.length).map((i) => lerpContour(t, a[i], b[i]));
 };
 
 const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
@@ -268,25 +281,43 @@ export class JObject {
   }
 }
 export class VObject extends JObject {
-  curves: CubicCurve[];
+  glyphData: GlpyhData;
 
   constructor() {
     super();
-    this.curves = [];
+    this.glyphData = [];
     this._strokeStyle = WHITE;
     this._fillStyle = TRANSPARENT;
   }
+  lastContour() {
+    return this.glyphData[this.glyphData.length - 1];
+  }
   pos(): Vec2 {
-    if (this.curves.length == 0) return [0, 0];
-    return this.curves[this.curves.length - 1][3];
+    if (this.glyphData.length == 0) return [0, 0];
+    const contour = this.lastContour();
+    return contour[contour.length - 1][3];
   }
   addCurve(curve: CubicCurve) {
-    this.curves.push(curve);
+    if (this.glyphData.length == 0) this.glyphData.push([]);
+    this.glyphData[this.glyphData.length - 1].push(curve);
     return this;
   }
   addCurves(...curves: CubicCurve[]) {
     curves.forEach((p) => this.addCurve(p));
     return this;
+  }
+  addContour(contour: Contour) {
+    this.glyphData.push(contour);
+  }
+  addDummyContour(len: number = 1) {
+    const pos = this.pos();
+    const newCountour: Contour = range(len).map((i) => [
+      [...pos],
+      [...pos],
+      [...pos],
+      [...pos],
+    ]);
+    this.addContour(newCountour);
   }
   addDummyCurve() {
     // Splatting just to make copy
@@ -307,20 +338,22 @@ export class VObject extends JObject {
     return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    const startPoint = this.curves[0][0];
+    const startPoint = this.glyphData[0][0][0];
     ctx.beginPath();
     ctx.moveTo(startPoint[0], startPoint[1]);
 
-    this.curves.forEach((curve) => {
-      ctx.lineTo(curve[0][0], curve[0][1]);
-      ctx.bezierCurveTo(
-        curve[1][0],
-        curve[1][1],
-        curve[2][0],
-        curve[2][1],
-        curve[3][0],
-        curve[3][1]
-      );
+    this.glyphData.forEach((contour) => {
+      contour.forEach((curve) => {
+        ctx.lineTo(curve[0][0], curve[0][1]);
+        ctx.bezierCurveTo(
+          curve[1][0],
+          curve[1][1],
+          curve[2][0],
+          curve[2][1],
+          curve[3][0],
+          curve[3][1]
+        );
+      });
     });
     ctx.lineTo(startPoint[0], startPoint[1]);
 
@@ -328,26 +361,28 @@ export class VObject extends JObject {
     ctx.fill();
 
     if (DEBUG) {
-      this.curves.forEach(([c1, c2, c], i) => {
-        ctx.beginPath();
-        ctx.arc(c1[0], c1[1], 5, 0, 2 * PI);
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
+      this.glyphData.forEach((contour) => {
+        contour.forEach(([c1, c2, c], i) => {
+          ctx.beginPath();
+          ctx.arc(c1[0], c1[1], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
 
-        ctx.beginPath();
-        ctx.arc(c2[0], c2[1], 5, 0, 2 * PI);
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
+          ctx.beginPath();
+          ctx.arc(c2[0], c2[1], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
 
-        ctx.beginPath();
-        ctx.arc(c[0], c[1], 5, 0, 2 * PI);
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
+          ctx.beginPath();
+          ctx.arc(c[0], c[1], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
 
-        ctx.fillText(i.toString(), c[0] - 10, c[1] - 10);
+          ctx.fillText(i.toString(), c[0] - 10, c[1] - 10);
+        });
       });
     }
   }
@@ -559,8 +594,11 @@ export class SimplePropertyAnim extends JAnimation {
 
     if (this.runTimeMs > this.durationMs) {
       this.done = true;
+      this.onFinish();
     }
   }
+
+  onFinish() {}
 }
 export class Translate extends SimplePropertyAnim {
   obj: JObject;
@@ -734,23 +772,39 @@ export class Morph extends Parallel {
 export class ShapeMorph extends SimplePropertyAnim {
   source: VObject;
   dest: VObject;
-  private from: CubicCurve[];
+  private from: GlpyhData;
+  private to: GlpyhData;
 
   constructor(source: VObject, dest: VObject) {
     super();
     this.source = source;
     this.dest = dest;
 
-    while (this.source.curves.length < this.dest.curves.length)
-      this.source.addDummyCurve();
-    while (this.dest.curves.length < this.source.curves.length)
-      this.dest.addDummyCurve();
+    while (this.source.glyphData.length < this.dest.glyphData.length)
+      this.source.addDummyContour();
+    while (this.dest.glyphData.length < this.source.glyphData.length)
+      this.dest.addDummyContour();
 
-    this.from = this.source.curves;
+    range(this.source.glyphData.length).forEach((i) => {
+      const sourceContour = this.source.glyphData[i];
+      const destContour = this.dest.glyphData[i];
+
+      while (sourceContour.length < destContour.length)
+        sourceContour.push([...sourceContour[sourceContour.length - 1]]);
+      while (destContour.length < sourceContour.length)
+        destContour.push([...destContour[destContour.length - 1]]);
+    });
+
+    this.from = this.source.glyphData;
+    this.to = this.dest.glyphData;
   }
 
   protected updateProperty(t: number): void {
-    this.source.curves = lerpVObj(t, this.from, this.dest.curves);
+    this.source.glyphData = lerpGlyph(t, this.from, this.dest.glyphData);
+  }
+  onFinish(): void {
+    console.log(this.to.length)
+    this.source.glyphData = this.to;
   }
 }
 export class VMorph extends Parallel {

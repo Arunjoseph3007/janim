@@ -1,4 +1,4 @@
-import { Scene, jf, loadFontFromUri } from "./janim";
+import { Scene, jf, loadFontFromUri, loadGoogleFont } from "./janim";
 import "./style.css";
 
 const FACTOR = 70;
@@ -11,46 +11,66 @@ class MyScene extends Scene {
   }
 
   async construct() {
-    // new Array(26)
-    //   .fill(0)
-    //   .map((_, i) => [i + 65, i + 97])
-    //   .flat()
-    //   .map((i) => String.fromCharCode(i))
-    //   .map((c, i) =>
-    //     jf
-    //       .Letter(c, "Montserrat")
-    //       .translateX((i % 10) * 100 + 80)
-    //       .translateY(Math.floor(i / 10) * 100 + 80)
-    //       .scale(0.05, -0.05)
-    //       .fill("pink")
-    //       .stroke("orange")
-    //       .setStrokeWidth(40)
-    //   )
-    //   .forEach((o) => this.add(o));
+    const alphabets = new Array(26)
+      .fill(0)
+      .map((_, i) => [i + 65, i + 97])
+      .flat()
+      .map((i) => String.fromCharCode(i))
+      .map((c, i) =>
+        jf
+          .Letter(c, "Montserrat")
+          // .translateX((i % 10) * 100 + 80)
+          // .translateY(Math.floor(i / 10) * 100 + 80)
+          .translateX(100)
+          .translateY(400)
+          .scale(0.5, -0.5)
+          .fill("pink")
+          .stroke("orange")
+          .setStrokeWidth(40)
+      );
+    // .forEach((o) => this.add(o));
 
-    const c = jf.Circle(200).translate(250, 250).fill("#00ffff77");
-    this.add(c);
+    this.add(alphabets[0]);
 
-    await this.wait();
+    for (let i = 1; i < alphabets.length; i++) {
+      const t = jf.VMorph(alphabets[0], alphabets[i]);
+      await this.play(t);
+      await this.wait(250);
+    }
 
-    const s = jf
-      .Rectangle(200, 100)
-      .translate(500, 250)
-      .fill("#00ffff66")
-      .scale(2, 2)
-      .rotateDeg(45);
+    // const letter = jf
+    //   .Letter("O", "Montserrat")
+    //   .fill("pink")
+    //   .setFillOpacity(0.5)
+    //   .stroke("red")
+    //   .setStrokeWidth(3)
+    //   .scale(0.6, 0.6)
+    //   .translate(100, 100);
+    // this.add(letter);
 
-    const morph = jf.VMorph(c, s);
-    await this.play(morph);
+    // const c = jf.Circle(200).translate(250, 250).fill("#00ffff77");
+    // this.add(c);
 
-    const p = jf
-      .Polygon([40, 100], [150, 120], [100, 300])
-      .translate(500, 250)
-      .fill("orange")
-      .scale(4, 4);
+    // await this.wait();
 
-    const re = jf.VMorph(c, p);
-    await this.play(re);
+    // const s = jf
+    //   .Rectangle(200, 100)
+    //   .translate(500, 250)
+    //   .fill("#00ffff66")
+    //   .scale(2, 2)
+    //   .rotateDeg(45);
+
+    // const p = jf
+    //   .Polygon([40, 100], [150, 120], [100, 300])
+    //   .translate(500, 250)
+    //   .fill("orange")
+    //   .scale(4, 4);
+
+    // const re = jf.VMorph(c, p);
+    // await this.play(re);
+
+    // const morph = jf.VMorph(c, s);
+    // await this.play(morph);
   }
 }
 
@@ -70,6 +90,7 @@ async function main() {
   canvas.height = HEIGHT;
   await loadFontFromUri("Montserrat", "Montserrat-Regular.ttf");
   await loadFontFromUri("JetBrainsMono", "JetBrainsMono.ttf");
+  await loadGoogleFont("ABeeZee");
 
   const sc = new MyScene(ctx);
   sc.mainLoop();

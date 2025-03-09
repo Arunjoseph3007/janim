@@ -1,10 +1,21 @@
-import { CubicCurve, Vec2 } from "./types";
+import { Contour, CubicCurve, GlpyhData, Vec2 } from "./types";
+import { midpoint } from "./utils";
 /**
  * @link https://github.com/Arunjoseph3007/fontsa/tree/main
  */
 
 /**
  */
+
+const isNthBitOn = (
+  word: Uint8Array<ArrayBufferLike>,
+  index: number
+): boolean => {
+  const wordNo = Math.floor(index / 8);
+  const bitNo = index % 8;
+  return ((word[wordNo] >> bitNo) & 1) == 1;
+};
+
 class BinaryReader {
   buf: Uint8Array;
   index: number;
@@ -177,51 +188,79 @@ class SimpleGlyph {
     return new SimpleGlyph(numberOfContours, endPtsOfContours, flags, points);
   }
 
-  getCurves(): CubicCurve[] {
-    // this.quadTo(glyph.points[0], glyph.points[0]);
-    // // const lastPoint = glyph.points[glyph.points.length-1]
-    // // const lastPoint = glyph.points[glyph.endPtsOfContours[0]]
-    // // this.quadTo(lastPoint,lastPoint);
+  getGlyphData(fontSize: number): GlpyhData {
+    // TODO deal with vertical flipping and fontSizes
+    const glyphData: GlpyhData = [];
+    let startIndex = 0;
+    let index = 0;
+    this.endPtsOfContours.forEach((length) => {
+      const contour: Contour = [];
+      let tmpCurve: Vec2[] = [];
+      for (; index <= length; index++) {
+        const p = this.points[index];
+        const flag = this.flags[index];
+        const onCurve = isNthBitOn(flag, 0);
 
-    // let index = 0;
-    // glyph.endPtsOfContours.forEach((length) => {
-    //   let tmpCurve: Vec2[] = [];
-    //   for (; index < length; index++) {
-    //     const p = glyph.points[index];
-    //     const flag = glyph.flags[index];
-    //     const onCurve = isNthBitOn(flag, 0);
+        if (tmpCurve.length == 0) {
+          tmpCurve.push(p);
+        } else if (!onCurve) {
+          tmpCurve.push(p);
+        } else if (tmpCurve.length == 1) {
+          const cp = midpoint(tmpCurve[0], p);
+          contour.push([tmpCurve[0], cp, cp, p]);
+          tmpCurve = [p];
+        } else if (tmpCurve.length > 1) {
+          tmpCurve.push(p);
+          {
+            let start = tmpCurve[0];
+            for (let j = 1; j < tmpCurve.length - 2; j++) {
+              const cp = midpoint(tmpCurve[j], tmpCurve[j + 1]);
+              contour.push([start, tmpCurve[j], tmpCurve[j], cp]);
+              start = cp;
+            }
 
-    //     if (!onCurve) {
-    //       tmpCurve.push(p);
-    //     } else if (tmpCurve.length == 1) {
-    //       this.lineTo(p);
-    //       tmpCurve = [];
-    //     } else if (tmpCurve.length > 1) {
-    //       tmpCurve.push(p);
-    //       {
-    //         let start = tmpCurve[0];
-    //         for (let j = 0; j < tmpCurve.length - 2; j++) {
-    //           const cp = midpoint(tmpCurve[j], tmpCurve[j + 2]);
-    //           this.cubicTo(start, tmpCurve[j], cp);
-    //           start = cp;
-    //         }
+            contour.push([
+              start,
+              tmpCurve[tmpCurve.length - 2],
+              tmpCurve[tmpCurve.length - 2],
+              tmpCurve[tmpCurve.length - 1],
+            ]);
+          }
 
-    //         this.cubicTo(
-    //           start,
-    //           tmpCurve[tmpCurve.length - 2],
-    //           tmpCurve[tmpCurve.length - 1]
-    //         );
-    //       }
+          tmpCurve = [p];
+        } else {
+          console.assert(false, "Unreachanle");
+          tmpCurve.push(p);
+        }
+      }
+      if (tmpCurve.length == 1) {
+        const startPoint = this.points[startIndex];
+        const cp = midpoint(tmpCurve[0], startPoint);
+        contour.push([tmpCurve[0], cp, cp, startPoint]);
+      } else {
+        tmpCurve.push(this.points[startIndex]);
+        {
+          let start = tmpCurve[0];
+          for (let j = 1; j < tmpCurve.length - 2; j++) {
+            const cp = midpoint(tmpCurve[j], tmpCurve[j + 1]);
+            contour.push([start, tmpCurve[j], tmpCurve[j], cp]);
+            start = cp;
+          }
 
-    //       tmpCurve = [p];
-    //     } else {
-    //       console.assert(false, "Unreachanle");
-    //       tmpCurve.push(p);
-    //     }
-    //   }
-    // });
+          contour.push([
+            start,
+            tmpCurve[tmpCurve.length - 2],
+            tmpCurve[tmpCurve.length - 2],
+            tmpCurve[tmpCurve.length - 1],
+          ]);
+        }
+      }
 
-    return [];
+      glyphData.push(contour);
+      startIndex = length + 1;
+    });
+
+    return glyphData;
   }
 
   transform(scaleX: number, scaleY: number, offsetX: number, offsetY: number) {

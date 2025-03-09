@@ -8,6 +8,20 @@ import {
   Contour,
   GlpyhData,
 } from "./types";
+import {
+  lerpNum,
+  solveQuadEQ,
+  range,
+  midpoint,
+  polarToXY,
+  clamp,
+  lerpVec2,
+  lerpGlyph,
+} from "./utils";
+
+const GoogleFonstJson = (await import("./googleFonts.json")) as {
+  default: Record<string, string>;
+};
 
 const DEBUG = 0;
 
@@ -22,26 +36,19 @@ export const loadFont = (name: string, font: Font) => {
 export const loadFontFromUri = async (name: string, uri: string) => {
   loadFont(name, await Font.fromURI(uri));
 };
+/**
+ * @link https://gist.github.com/karimnaaji/b6c9c9e819204113e9cabf290d580551
+ * @param family string
+ * @returns
+ */
+export const loadGoogleFont = async (family: string) => {
+  const uri = GoogleFonstJson.default[family];
+  if (!uri) return;
 
-const { PI, tan, sin, cos } = Math;
-
-const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
-
-const polarToXY = (r: number, theta: number): Vec2 => [
-  r * cos(theta),
-  r * sin(theta),
-];
-
-const isNthBitOn = (
-  word: Uint8Array<ArrayBufferLike>,
-  index: number
-): boolean => {
-  const wordNo = Math.floor(index / 8);
-  const bitNo = index % 8;
-  return ((word[wordNo] >> bitNo) & 1) == 1;
+  loadFontFromUri(family, uri);
 };
 
-const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(v, min));
+const { PI, tan, sin, cos } = Math;
 
 export class RGBA {
   r: number;
@@ -78,11 +85,6 @@ export class RGBA {
 const WHITE = new RGBA(1, 1, 1);
 const TRANSPARENT = new RGBA(1, 1, 0);
 
-const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
-const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
-  lerpNum(t, a[0], b[0]),
-  lerpNum(t, a[1], b[1]),
-];
 const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
   new RGBA(
     lerpNum(t, a.r, b.r),
@@ -90,31 +92,6 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
     lerpNum(t, a.b, b.b),
     lerpNum(t, a.a, b.a)
   );
-const lerpCurve: TLerpFunc<CubicCurve> = (t, a, b) => [
-  lerpVec2(t, a[0], b[0]),
-  lerpVec2(t, a[1], b[1]),
-  lerpVec2(t, a[2], b[2]),
-  lerpVec2(t, a[3], b[3]),
-];
-const lerpContour: TLerpFunc<Contour> = (t, a, b) => {
-  console.assert(a.length == b.length, "Can only lerp object of equal length");
-
-  return range(a.length).map((i) => lerpCurve(t, a[i], b[i]));
-};
-const lerpGlyph: TLerpFunc<GlpyhData> = (t, a, b) => {
-  console.assert(a.length == b.length, "Can only lerp object of equal length");
-
-  return range(a.length).map((i) => lerpContour(t, a[i], b[i]));
-};
-
-const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
-
-const solveQuadEQ = (a: number, b: number, c: number): [number, number] => {
-  const disc = b * b - 4 * a * c;
-  console.assert(disc > 0, "No real roots of equation");
-  const d = Math.sqrt(disc);
-  return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
-};
 
 const linear: EasingFunc = (t) => t;
 const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
@@ -169,6 +146,14 @@ export class JObject {
 
   fill(c: string) {
     this.fillStyle = c;
+    return this;
+  }
+  setFillOpacity(o: number) {
+    this._fillStyle.a = o;
+    return this;
+  }
+  setStrokeOpacity(o: number) {
+    this._strokeStyle.a = o;
     return this;
   }
   stroke(c: string) {
@@ -338,11 +323,11 @@ export class VObject extends JObject {
     return this;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    const startPoint = this.glyphData[0][0][0];
     ctx.beginPath();
-    ctx.moveTo(startPoint[0], startPoint[1]);
-
     this.glyphData.forEach((contour) => {
+      const startPoint = contour[0][0];
+      ctx.moveTo(startPoint[0], startPoint[1]);
+
       contour.forEach((curve) => {
         ctx.lineTo(curve[0][0], curve[0][1]);
         ctx.bezierCurveTo(
@@ -354,15 +339,16 @@ export class VObject extends JObject {
           curve[3][1]
         );
       });
-    });
-    ctx.lineTo(startPoint[0], startPoint[1]);
 
+      ctx.lineTo(startPoint[0], startPoint[1]);
+    });
     ctx.stroke();
     ctx.fill();
 
     if (DEBUG) {
+      ctx.font = "34px monospace";
       this.glyphData.forEach((contour) => {
-        contour.forEach(([c1, c2, c], i) => {
+        contour.forEach(([c1, c2, c3, c], i) => {
           ctx.beginPath();
           ctx.arc(c1[0], c1[1], 5, 0, 2 * PI);
           ctx.stroke();
@@ -371,6 +357,12 @@ export class VObject extends JObject {
 
           ctx.beginPath();
           ctx.arc(c2[0], c2[1], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
+
+          ctx.beginPath();
+          ctx.arc(c3[0], c3[1], 5, 0, 2 * PI);
           ctx.stroke();
           ctx.fill();
           ctx.beginPath();
@@ -514,6 +506,8 @@ export class Letter extends VObject {
     const code = this.char.charCodeAt(0);
     const glyphId = this.font.cmapTable.getGlyphId(code);
     const glyph = this.font.glyphs[glyphId];
+
+    this.glyphData = glyph.getGlyphData(1);
   }
 }
 export class Group extends JObject {
@@ -773,7 +767,6 @@ export class ShapeMorph extends SimplePropertyAnim {
   source: VObject;
   dest: VObject;
   private from: GlpyhData;
-  private to: GlpyhData;
 
   constructor(source: VObject, dest: VObject) {
     super();
@@ -793,18 +786,15 @@ export class ShapeMorph extends SimplePropertyAnim {
         sourceContour.push([...sourceContour[sourceContour.length - 1]]);
       while (destContour.length < sourceContour.length)
         destContour.push([...destContour[destContour.length - 1]]);
+
+      console.assert(sourceContour.length == destContour.length, "Fails");
     });
 
     this.from = this.source.glyphData;
-    this.to = this.dest.glyphData;
   }
 
   protected updateProperty(t: number): void {
     this.source.glyphData = lerpGlyph(t, this.from, this.dest.glyphData);
-  }
-  onFinish(): void {
-    console.log(this.to.length)
-    this.source.glyphData = this.to;
   }
 }
 export class VMorph extends Parallel {

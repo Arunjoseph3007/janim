@@ -1,6 +1,6 @@
 const DEBUG = 0;
 
-import { Font } from "./font";
+import Font from "./font";
 import {
   Vec2,
   TLerpFunc,
@@ -48,7 +48,7 @@ export const loadGoogleFont = async (family: string) => {
   loadFontFromUri(family, `http://fonts.gstatic.com/s/${uri}.ttf`);
 };
 
-const { PI, tan, sin, cos } = Math;
+const { PI, tan } = Math;
 
 export class RGBA {
   r: number;
@@ -108,7 +108,7 @@ const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
     return y;
   };
 };
-const cubic: (a: Vec2, b: Vec2) => EasingFunc = (a, b) => {
+const cubic: (a: Vec2, b: Vec2) => EasingFunc = (_a, _b) => {
   todo();
   return function (t) {
     return t;
@@ -128,7 +128,7 @@ const colorToRGBA = (color: string) => {
   return RGBA.fromStr(rgbstr);
 };
 
-export class JObject {
+export abstract class JObject {
   _strokeStyle: RGBA = WHITE;
   _fillStyle: RGBA = TRANSPARENT;
   strokeWidth = 1;
@@ -261,9 +261,7 @@ export class JObject {
     ctx.globalAlpha = originalAlpha;
   }
 
-  render(ctx: CanvasRenderingContext2D) {
-    todo();
-  }
+  abstract render(ctx: CanvasRenderingContext2D): void;
 }
 export class VObject extends JObject {
   glyphData: GlpyhData;
@@ -296,7 +294,7 @@ export class VObject extends JObject {
   }
   addDummyContour(len: number = 1) {
     const pos = this.pos();
-    const newCountour: Contour = range(len).map((i) => [
+    const newCountour: Contour = range(len).map(() => [
       [...pos],
       [...pos],
       [...pos],
@@ -538,16 +536,15 @@ export class Group extends JObject {
   }
 }
 
-export class JAnimation {
+export abstract class JAnimation {
   background = false;
   durationMs = 3000;
   runTimeMs = 0;
   done = false;
 
   constructor() {}
-  step(dt: number) {
-    todo();
-  }
+
+  abstract step(dt: number): void;
 
   in(durationMs: number) {
     this.durationMs = durationMs;
@@ -576,15 +573,13 @@ export class Wait extends JAnimation {
     if (t > 1) this.done = true;
   }
 }
-export class SimplePropertyAnim extends JAnimation {
+export abstract class SimplePropertyAnim extends JAnimation {
   easing: EasingFunc = linear;
   constructor() {
     super();
   }
 
-  protected updateProperty(t: number) {
-    todo();
-  }
+  protected abstract updateProperty(t: number): void;
 
   ease(fn: EasingFunc) {
     this.easing = fn;

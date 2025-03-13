@@ -453,7 +453,7 @@ class HmtxTable {
   }
 }
 
-export class Font {
+export default class Font {
   fontDirectory: Record<string, TableRecord> = {};
   cmapTable!: CmapTable;
   maxpTable!: MaxpTable;

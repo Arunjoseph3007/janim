@@ -135,6 +135,13 @@ async function main() {
   await loadGoogleFont("ABeeZee");
 
   const sc = new MyScene(ctx);
+
+  document.addEventListener("keypress", (e) => {
+    if (e.key == " ") {
+      sc.togglePlayState();
+    }
+  });
+
   sc.mainLoop();
 }
 

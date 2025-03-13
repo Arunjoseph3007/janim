@@ -869,9 +869,20 @@ export class Scene {
   done = false;
   ctx: CanvasRenderingContext2D;
   dt = 0;
+  running = false;
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
+  }
+
+  pause() {
+    this.running = false;
+  }
+  resume() {
+    this.running = true;
+  }
+  togglePlayState() {
+    this.running = !this.running;
   }
 
   add(obj: JObject) {
@@ -884,6 +895,7 @@ export class Scene {
   }
 
   mainLoop() {
+    this.running = true;
     this.construct();
     this.render();
   }
@@ -891,6 +903,7 @@ export class Scene {
   async play(anim: JAnimation) {
     return new Promise<void>((resolve) => {
       let startTime = 0;
+      let playTime = 0;
       let dt = 0;
       let prevT = 0;
 
@@ -898,10 +911,13 @@ export class Scene {
         dt = t - prevT;
         prevT = t;
 
-        anim.step(dt);
-        this.render();
+        if (this.running) {
+          anim.step(dt);
+          this.render();
+          playTime += dt;
+        }
 
-        if (t - startTime < anim.durationMs) {
+        if (playTime < anim.durationMs) {
           window.requestAnimationFrame(loop);
         } else {
           resolve();

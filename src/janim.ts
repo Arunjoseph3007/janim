@@ -19,6 +19,7 @@ import {
   clamp,
   lerpVec2,
   lerpGlyph,
+  translateGlyph,
 } from "./utils";
 
 const GoogleFonstJson = (await import("./googleFonts.json")) as {
@@ -377,7 +378,10 @@ export class VObject extends JObject {
     }
   }
 }
-export class Text extends JObject {
+/**
+ * @deprecated I dont think this will be useful anymore
+ */
+class _Text extends JObject {
   text: string;
   mode: ColoringMode;
   maxWidth?: number;
@@ -516,6 +520,69 @@ export class Letter extends VObject {
 
     this.glyphData = glyph.getGlyphData(size);
 
+    return this;
+  }
+}
+export class Text extends VObject {
+  str: string;
+  font: Font;
+  maxWidth: number;
+  fontSize: number;
+  constructor(str: string, font: string) {
+    super();
+    this.str = str;
+    this.font = loadedFonts[font];
+    this.maxWidth = 800;
+    this.fontSize = 20;
+
+    this.updateGlyphData();
+  }
+
+  private updateGlyphData() {
+    // TODO add support for propper text alignment.
+    // Maybe we could read in words and calculate appropriate width and then render
+    let x = 0;
+    let y = 0;
+    this.glyphData = [];
+    this.str.split("").forEach((char) => {
+      if (char == " ") {
+        x += 5 * this.fontSize;
+        return;
+      }
+      const code = char.charCodeAt(0);
+      const glyphId = this.font.cmapTable.getGlyphId(code);
+      const glyph = this.font.glyphs[glyphId];
+
+      const [advancedWidth, leftSideBearing] =
+        this.font.hmtxTable.getMetric(glyphId);
+      x += (leftSideBearing * this.fontSize) / 100;
+      this.glyphData = this.glyphData.concat(
+        translateGlyph(glyph.getGlyphData(this.fontSize), x, y)
+      );
+      x += (advancedWidth * this.fontSize) / 100;
+
+      if (x > this.maxWidth) {
+        y += this.fontSize * 15;
+        x = 0;
+      }
+    });
+  }
+
+  setFontSize(size: number) {
+    this.fontSize = size;
+    this.updateGlyphData();
+    return this;
+  }
+
+  setMaxWidth(width: number) {
+    this.maxWidth = width;
+    this.updateGlyphData();
+    return this;
+  }
+
+  setFont(font: string) {
+    this.font = loadedFonts[font];
+    this.updateGlyphData();
     return this;
   }
 }

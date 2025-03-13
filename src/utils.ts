@@ -35,6 +35,21 @@ export const lerpGlyph: TLerpFunc<GlpyhData> = (t, a, b) => {
   return range(a.length).map((i) => lerpContour(t, a[i], b[i]));
 };
 
+export const translateGlyph = (
+  glyphData: GlpyhData,
+  offsetX: number,
+  offsetY: number
+): GlpyhData => {
+  return glyphData.map((contour) =>
+    contour.map(
+      (curve) =>
+        curve.map(
+          (vec) => [vec[0] + offsetX, vec[1] + offsetY] as Vec2
+        ) as CubicCurve
+    )
+  );
+};
+
 export const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
 
 export const solveQuadEQ = (

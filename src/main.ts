@@ -44,7 +44,7 @@ class MyScene extends Scene {
         .forEach((a) => this.add(a));
     }
     // All alphabets transform
-    else if (1) {
+    else if (0) {
       const alphabets = new Array(26)
         .fill(0)
         .map((_, i) => [i + 65, i + 97])
@@ -112,6 +112,25 @@ class MyScene extends Scene {
 
       const morph = jf.VMorph(c, s);
       await this.play(morph);
+    }
+    // Text
+    else if (1) {
+      const t = jf
+        .Text("Text is just vector objects", "Montserrat")
+        .fill("pink")
+        .translate(100, 200)
+        .setFontSize(8);
+      this.add(t);
+
+      const s = jf
+        .Text("It can transform to anything", "Montserrat")
+        .fill("yellow")
+        .translate(100, 200)
+        .setFontSize(6);
+
+      const vm = jf.VMorph(t, s);
+      await this.wait(1000)
+      await this.play(vm);
     }
   }
 }

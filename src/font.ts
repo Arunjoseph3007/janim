@@ -651,8 +651,8 @@ export default class Font {
     const numOfLongHorMetrics = reader.parseUint16();
     this.gotoTable("hmtx", reader);
 
-    const hMetrics: Vec2[] = [],
-      leftSideBearings: number[] = [];
+    const hMetrics: Vec2[] = [];
+    const leftSideBearings: number[] = [];
     for (let i = 0; i < numOfLongHorMetrics; i++) {
       hMetrics.push([reader.parseUint16(), reader.parseInt16()]);
     }

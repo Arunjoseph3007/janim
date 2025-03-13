@@ -1,5 +1,6 @@
 import { Scene, jf, loadFontFromUri, loadGoogleFont } from "./janim";
 import "./style.css";
+import { range } from "./utils";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -11,7 +12,39 @@ class MyScene extends Scene {
   }
 
   async construct() {
-    if (1) {
+    // Single alphabet
+    if (0) {
+      const letter = jf
+        .Letter("R", "Montserrat")
+        .setFontSize(80)
+        .fill("pink")
+        .setFillOpacity(0.5)
+        .stroke("orange")
+        .setStrokeWidth(2)
+        .translate(100, 600);
+
+      this.add(letter);
+    }
+    // All alphabets
+    else if (0) {
+      range(26)
+        .map((_, i) => [i + 65, i + 97])
+        .flat()
+        .map((i) => String.fromCharCode(i))
+        .map((c, i) =>
+          jf
+            .Letter(c, "JetBrainsMono")
+            .translateX((i % 10) * 100 + 50)
+            .translateY(100 + 100 * Math.floor(i / 10))
+            .scale(0.5, 0.5)
+            .fill("pink")
+            .setFontSize(20)
+            .setFillOpacity(0.5)
+        )
+        .forEach((a) => this.add(a));
+    }
+    // All alphabets transform
+    else if (1) {
       const alphabets = new Array(26)
         .fill(0)
         .map((_, i) => [i + 65, i + 97])
@@ -34,8 +67,8 @@ class MyScene extends Scene {
         await this.wait(250);
       }
     }
-
-    if (0) {
+    // Alphabet morph
+    else if (0) {
       const first = jf
         .Letter("i", "JetBrainsMono")
         .fill("pink")
@@ -53,8 +86,8 @@ class MyScene extends Scene {
       await this.wait(500);
       await this.play(vm);
     }
-
-    if (0) {
+    // Shapge morhp
+    else if (0) {
       const c = jf.Circle(200).translate(250, 250).fill("#00ffff55");
       this.add(c);
 

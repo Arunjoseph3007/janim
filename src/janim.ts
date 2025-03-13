@@ -499,6 +499,7 @@ export class Letter extends VObject {
   char: string;
   font: Font;
   constructor(char: string, font: string) {
+    console.assert(char.length == 1, "Letter expects a single character");
     super();
     this.char = char;
     this.font = loadedFonts[font];

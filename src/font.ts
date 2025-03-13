@@ -1,21 +1,10 @@
 import { Contour, CubicCurve, GlpyhData, Vec2 } from "./types";
-import { lerpVec2, midpoint } from "./utils";
+import { isNthBitOn, lerpVec2, midpoint } from "./utils";
+
 /**
  * Ported from python
  * @link https://github.com/Arunjoseph3007/fontsa/tree/main
  */
-
-/**
- */
-const isNthBitOn = (
-  word: Uint8Array<ArrayBufferLike>,
-  index: number
-): boolean => {
-  const wordNo = Math.floor(index / 8);
-  const bitNo = index % 8;
-  return ((word[wordNo] >> bitNo) & 1) == 1;
-};
-
 class BinaryReader {
   buf: Uint8Array;
   index: number;
@@ -295,65 +284,57 @@ class SimpleGlyph {
   }
 }
 
-class TableRecord {
-  constructor(
-    public tag: string,
-    public checksum: number,
-    public offset: number,
-    public length: number
-  ) {}
-}
+type TableRecord = {
+  tag: string;
+  checksum: number;
+  offset: number;
+  length: number;
+};
 
-class EncodingRecord {
-  constructor(
-    public platformID: number,
-    public encodingID: number,
-    public offset: number
-  ) {}
-}
+type EncodingRecord = {
+  platformID: number;
+  encodingID: number;
+  offset: number;
+};
 
-class HeadTable {
-  constructor(
-    public majorVersion: number,
-    public minorVersion: number,
-    public fontRevision: number,
-    public checksumAdjustment: number,
-    public magicNumber: number,
-    public flags: number,
-    public unitsPerEm: number,
-    public created: number,
-    public modified: number,
-    public xMin: number,
-    public yMin: number,
-    public xMax: number,
-    public yMax: number,
-    public macStyle: number,
-    public lowestRecPPEM: number,
-    public fontDirectionHint: number,
-    public indexToLocFormat: number,
-    public glyphDataFormat: number
-  ) {}
-}
+type HeadTable = {
+  majorVersion: number;
+  minorVersion: number;
+  fontRevision: number;
+  checksumAdjustment: number;
+  magicNumber: number;
+  flags: number;
+  unitsPerEm: number;
+  created: number;
+  modified: number;
+  xMin: number;
+  yMin: number;
+  xMax: number;
+  yMax: number;
+  macStyle: number;
+  lowestRecPPEM: number;
+  fontDirectionHint: number;
+  indexToLocFormat: number;
+  glyphDataFormat: number;
+};
 
-class MaxpTable {
-  constructor(
-    public version: number,
-    public numGlyphs: number,
-    public maxPoints: number,
-    public maxContours: number,
-    public maxCompositePoints: number,
-    public maxCompositeContours: number,
-    public maxZones: number,
-    public maxTwilightPoints: number,
-    public maxStorage: number,
-    public maxFunctionDefs: number,
-    public maxInstructionDefs: number,
-    public maxStackElements: number,
-    public maxSizeOfInstructions: number,
-    public maxComponentElements: number,
-    public maxComponentDepth: number
-  ) {}
-}
+type MaxpTable = {
+  version: number;
+  numGlyphs: number;
+  maxPoints: number;
+  maxContours: number;
+  maxCompositePoints: number;
+  maxCompositeContours: number;
+  maxZones: number;
+  maxTwilightPoints: number;
+  maxStorage: number;
+  maxFunctionDefs: number;
+  maxInstructionDefs: number;
+  maxStackElements: number;
+  maxSizeOfInstructions: number;
+  maxComponentElements: number;
+  maxComponentDepth: number;
+};
 
 class CmapTable {
   startCodes: number[] = [];
@@ -369,13 +350,11 @@ class CmapTable {
     const encodingRecords: EncodingRecord[] = [];
 
     for (let i = 0; i < numberSubtables; i++) {
-      encodingRecords.push(
-        new EncodingRecord(
-          reader.parseUint16(),
-          reader.parseUint16(),
-          reader.parseUint32()
-        )
-      );
+      encodingRecords.push({
+        platformID: reader.parseUint16(),
+        encodingID: reader.parseUint16(),
+        offset: reader.parseUint32(),
+      });
     }
 
     reader.parseUint16(); // format
@@ -511,47 +490,47 @@ export default class Font {
 
   parseMaxpTable(reader: BinaryReader): void {
     this.gotoTable("maxp", reader);
-    this.maxpTable = new MaxpTable(
-      reader.parseUint32(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint16()
-    );
+    this.maxpTable = {
+      version: reader.parseUint32(),
+      numGlyphs: reader.parseUint16(),
+      maxPoints: reader.parseUint16(),
+      maxContours: reader.parseUint16(),
+      maxCompositePoints: reader.parseUint16(),
+      maxCompositeContours: reader.parseUint16(),
+      maxZones: reader.parseUint16(),
+      maxTwilightPoints: reader.parseUint16(),
+      maxStorage: reader.parseUint16(),
+      maxFunctionDefs: reader.parseUint16(),
+      maxInstructionDefs: reader.parseUint16(),
+      maxStackElements: reader.parseUint16(),
+      maxSizeOfInstructions: reader.parseUint16(),
+      maxComponentElements: reader.parseUint16(),
+      maxComponentDepth: reader.parseUint16(),
+    };
   }
 
   parseHeadTable(reader: BinaryReader): void {
     this.gotoTable("head", reader);
-    this.headTable = new HeadTable(
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseUint32(),
-      reader.parseUint32(),
-      reader.parseUint32(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseLongDateTime(),
-      reader.parseLongDateTime(),
-      reader.parseInt16(),
-      reader.parseInt16(),
-      reader.parseInt16(),
-      reader.parseInt16(),
-      reader.parseUint16(),
-      reader.parseUint16(),
-      reader.parseInt16(),
-      reader.parseInt16(),
-      reader.parseInt16()
-    );
+    this.headTable = {
+      majorVersion: reader.parseUint16(),
+      minorVersion: reader.parseUint16(),
+      fontRevision: reader.parseUint32(),
+      checksumAdjustment: reader.parseUint32(),
+      magicNumber: reader.parseUint32(),
+      flags: reader.parseUint16(),
+      unitsPerEm: reader.parseUint16(),
+      created: reader.parseLongDateTime(),
+      modified: reader.parseLongDateTime(),
+      xMin: reader.parseInt16(),
+      yMin: reader.parseInt16(),
+      xMax: reader.parseInt16(),
+      yMax: reader.parseInt16(),
+      macStyle: reader.parseUint16(),
+      lowestRecPPEM: reader.parseUint16(),
+      fontDirectionHint: reader.parseInt16(),
+      indexToLocFormat: reader.parseInt16(),
+      glyphDataFormat: reader.parseInt16(),
+    };
   }
 
   parseLocaTable(reader: BinaryReader): void {

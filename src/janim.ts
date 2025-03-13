@@ -45,7 +45,7 @@ export const loadGoogleFont = async (family: string) => {
   const uri = GoogleFonstJson.default[family];
   if (!uri) throw new Error("Cant find font " + family);
 
-  loadFontFromUri(family, "http://fonts.gstatic.com/s/" + uri);
+  loadFontFromUri(family, `http://fonts.gstatic.com/s/${uri}.ttf`);
 };
 
 const { PI, tan, sin, cos } = Math;

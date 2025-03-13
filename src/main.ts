@@ -11,66 +11,75 @@ class MyScene extends Scene {
   }
 
   async construct() {
-    const alphabets = new Array(26)
-      .fill(0)
-      .map((_, i) => [i + 65, i + 97])
-      .flat()
-      .map((i) => String.fromCharCode(i))
-      .map((c, i) =>
-        jf
-          .Letter(c, "Montserrat")
-          // .translateX((i % 10) * 100 + 80)
-          // .translateY(Math.floor(i / 10) * 100 + 80)
-          .translateX(100)
-          .translateY(400)
-          .scale(0.5, -0.5)
-          .fill("pink")
-          .stroke("orange")
-          .setStrokeWidth(40)
-      );
-    // .forEach((o) => this.add(o));
+    if (1) {
+      const alphabets = new Array(26)
+        .fill(0)
+        .map((_, i) => [i + 65, i + 97])
+        .flat()
+        .map((i) => String.fromCharCode(i))
+        .map((c) =>
+          jf
+            .Letter(c, "Montserrat")
+            .translateX(100)
+            .translateY(400)
+            .scale(0.5, -0.5)
+            .fill("pink")
+            .setFillOpacity(0.5)
+        );
+      this.add(alphabets[0]);
 
-    this.add(alphabets[0]);
-
-    for (let i = 1; i < alphabets.length; i++) {
-      const t = jf.VMorph(alphabets[0], alphabets[i]);
-      await this.play(t);
-      await this.wait(250);
+      for (let i = 1; i < alphabets.length; i++) {
+        const t = jf.VMorph(alphabets[0], alphabets[i]);
+        await this.play(t);
+        await this.wait(250);
+      }
     }
 
-    // const letter = jf
-    //   .Letter("O", "Montserrat")
-    //   .fill("pink")
-    //   .setFillOpacity(0.5)
-    //   .stroke("red")
-    //   .setStrokeWidth(3)
-    //   .scale(0.6, 0.6)
-    //   .translate(100, 100);
-    // this.add(letter);
+    if (0) {
+      const first = jf
+        .Letter("i", "JetBrainsMono")
+        .fill("pink")
+        .scale(0.5, -0.5)
+        .translateY(500);
+      const second = jf
+        .Letter("g", "Montserrat")
+        .fill("pink")
+        .scale(0.5, -0.5)
+        .translateY(500);
+      this.add(first);
 
-    // const c = jf.Circle(200).translate(250, 250).fill("#00ffff77");
-    // this.add(c);
+      const vm = jf.VMorph(first, second);
 
-    // await this.wait();
+      await this.wait(500);
+      await this.play(vm);
+    }
 
-    // const s = jf
-    //   .Rectangle(200, 100)
-    //   .translate(500, 250)
-    //   .fill("#00ffff66")
-    //   .scale(2, 2)
-    //   .rotateDeg(45);
+    if (0) {
+      const c = jf.Circle(200).translate(250, 250).fill("#00ffff55");
+      this.add(c);
 
-    // const p = jf
-    //   .Polygon([40, 100], [150, 120], [100, 300])
-    //   .translate(500, 250)
-    //   .fill("orange")
-    //   .scale(4, 4);
+      await this.wait();
 
-    // const re = jf.VMorph(c, p);
-    // await this.play(re);
+      const s = jf
+        .Rectangle(200, 100)
+        .translate(500, 250)
+        .fill("#00ffff66")
+        .scale(2, 2)
+        .rotateDeg(45);
 
-    // const morph = jf.VMorph(c, s);
-    // await this.play(morph);
+      const p = jf
+        .Polygon([40, 100], [150, 120], [100, 300])
+        .translate(500, 250)
+        .fill("orange")
+        .setFillOpacity(0.5)
+        .scale(4, 4);
+
+      const re = jf.VMorph(c, p);
+      await this.play(re);
+
+      const morph = jf.VMorph(c, s);
+      await this.play(morph);
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+const DEBUG = 0;
+
 import { Font } from "./font";
 import {
   Vec2,
@@ -23,8 +25,6 @@ const GoogleFonstJson = (await import("./googleFonts.json")) as {
   default: Record<string, string>;
 };
 
-const DEBUG = 0;
-
 const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
@@ -43,9 +43,9 @@ export const loadFontFromUri = async (name: string, uri: string) => {
  */
 export const loadGoogleFont = async (family: string) => {
   const uri = GoogleFonstJson.default[family];
-  if (!uri) return;
+  if (!uri) throw new Error("Cant find font " + family);
 
-  loadFontFromUri(family, uri);
+  loadFontFromUri(family, "http://fonts.gstatic.com/s/" + uri);
 };
 
 const { PI, tan, sin, cos } = Math;
@@ -779,15 +779,19 @@ export class ShapeMorph extends SimplePropertyAnim {
       this.dest.addDummyContour();
 
     range(this.source.glyphData.length).forEach((i) => {
-      const sourceContour = this.source.glyphData[i];
+      const srcContour = this.source.glyphData[i];
       const destContour = this.dest.glyphData[i];
 
-      while (sourceContour.length < destContour.length)
-        sourceContour.push([...sourceContour[sourceContour.length - 1]]);
-      while (destContour.length < sourceContour.length)
-        destContour.push([...destContour[destContour.length - 1]]);
+      while (srcContour.length < destContour.length) {
+        const endPos = srcContour[srcContour.length - 1][3];
+        srcContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+      }
+      while (destContour.length < srcContour.length) {
+        const endPos = destContour[destContour.length - 1][3];
+        destContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+      }
 
-      console.assert(sourceContour.length == destContour.length, "Fails");
+      console.assert(srcContour.length == destContour.length, "Fails");
     });
 
     this.from = this.source.glyphData;

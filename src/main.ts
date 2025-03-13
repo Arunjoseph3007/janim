@@ -1,4 +1,4 @@
-import { Scene, jf, loadFontFromUri, loadGoogleFont } from "./janim";
+import { Scene, jf, loadFontFromUri } from "./janim";
 import "./style.css";
 import { range } from "./utils";
 
@@ -114,7 +114,7 @@ class MyScene extends Scene {
       await this.play(morph);
     }
     // Text
-    else if (1) {
+    else if (0) {
       const t = jf
         .Text("Text is just vector objects", "Montserrat")
         .fill("pink")
@@ -129,8 +129,18 @@ class MyScene extends Scene {
         .setFontSize(6);
 
       const vm = jf.VMorph(t, s);
-      await this.wait(1000)
+      await this.wait(1000);
       await this.play(vm);
+    }
+    // Custom Updaters
+    else if (1) {
+      const c = jf.Circle(200).fill("red");
+      // const c = jf.Text("hahahah", "Montserrat").fill("pink").setFontSize(3);
+      c.addUpdaters((o) => {
+        o.translation = this.getMouse();
+      });
+      this.add(c);
+      this.wait(10000000);
     }
   }
 }
@@ -151,7 +161,6 @@ async function main() {
   canvas.height = HEIGHT;
   await loadFontFromUri("Montserrat", "Montserrat-Regular.ttf");
   await loadFontFromUri("JetBrainsMono", "JetBrainsMono.ttf");
-  await loadGoogleFont("ABeeZee");
 
   const sc = new MyScene(ctx);
 

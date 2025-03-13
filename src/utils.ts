@@ -92,3 +92,12 @@ export const solvePolynomial = (
 
   return root;
 };
+
+export const isNthBitOn = (
+  word: Uint8Array<ArrayBufferLike>,
+  index: number
+): boolean => {
+  const wordNo = Math.floor(index / 8);
+  const bitNo = index % 8;
+  return ((word[wordNo] >> bitNo) & 1) == 1;
+};

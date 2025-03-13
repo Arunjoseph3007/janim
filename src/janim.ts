@@ -129,6 +129,8 @@ const colorToRGBA = (color: string) => {
   return RGBA.fromStr(rgbstr);
 };
 
+type JObjectUpdater = (obj: JObject, t: number) => void;
+
 export abstract class JObject {
   _strokeStyle: RGBA = WHITE;
   _fillStyle: RGBA = TRANSPARENT;
@@ -137,6 +139,16 @@ export abstract class JObject {
   scaling: Vec2 = [1, 1];
   rotation = 0;
   opacity = 1;
+  updaters: JObjectUpdater[] = [];
+
+  addUpdaters(...updaters: JObjectUpdater[]) {
+    this.updaters.push(...updaters);
+    return this;
+  }
+  removeUpdater(updater: JObjectUpdater) {
+    this.updaters = this.updaters.filter((up) => up != updater);
+    return this;
+  }
 
   set fillStyle(c: string) {
     this._fillStyle = colorToRGBA(c);
@@ -502,6 +514,7 @@ export class Letter extends VObject {
   font: Font;
   constructor(char: string, font: string) {
     console.assert(char.length == 1, "Letter expects a single character");
+    console.assert(font in loadedFonts, "Font not loaded properly");
     super();
     this.char = char;
     this.font = loadedFonts[font];
@@ -529,6 +542,7 @@ export class Text extends VObject {
   maxWidth: number;
   fontSize: number;
   constructor(str: string, font: string) {
+    console.assert(font in loadedFonts, "Font not loaded properly");
     super();
     this.str = str;
     this.font = loadedFonts[font];
@@ -581,6 +595,7 @@ export class Text extends VObject {
   }
 
   setFont(font: string) {
+    console.assert(font in loadedFonts, "Font not loaded properly");
     this.font = loadedFonts[font];
     this.updateGlyphData();
     return this;
@@ -932,9 +947,22 @@ export class Scene {
   ctx: CanvasRenderingContext2D;
   dt = 0;
   running = false;
+  private mouse: Vec2 = [0, 0];
+  private loc: Vec2;
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
+    const boundingRect = ctx.canvas.getBoundingClientRect();
+    this.loc = [boundingRect.x, boundingRect.y];
+
+    this.ctx.canvas.addEventListener("mousemove", (e) => {
+      this.mouse[0] = e.clientX - this.loc[0];
+      this.mouse[1] = e.clientY - this.loc[1];
+    });
+  }
+
+  getMouse() {
+    return this.mouse;
   }
 
   pause() {
@@ -975,6 +1003,9 @@ export class Scene {
 
         if (this.running) {
           anim.step(dt);
+          this.objects.forEach((obj) =>
+            obj.updaters.forEach((upd) => upd(obj, playTime))
+          );
           this.render();
           playTime += dt;
         }

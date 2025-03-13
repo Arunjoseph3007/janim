@@ -507,7 +507,17 @@ export class Letter extends VObject {
     const glyphId = this.font.cmapTable.getGlyphId(code);
     const glyph = this.font.glyphs[glyphId];
 
-    this.glyphData = glyph.getGlyphData(1);
+    this.glyphData = glyph.getGlyphData(20);
+  }
+
+  setFontSize(size: number) {
+    const code = this.char.charCodeAt(0);
+    const glyphId = this.font.cmapTable.getGlyphId(code);
+    const glyph = this.font.glyphs[glyphId];
+
+    this.glyphData = glyph.getGlyphData(size);
+
+    return this;
   }
 }
 export class Group extends JObject {

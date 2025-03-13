@@ -20,10 +20,10 @@ class MyScene extends Scene {
         .map((c) =>
           jf
             .Letter(c, "Montserrat")
-            .translateX(100)
-            .translateY(400)
+            .translate(50, 240)
             .scale(0.5, 0.5)
             .fill("pink")
+            .setFontSize(60)
             .setFillOpacity(0.5)
         );
       this.add(alphabets[0]);

@@ -1,4 +1,4 @@
-import { Contour, GlpyhData, Vec2 } from "./types";
+import { Contour, CubicCurve, GlpyhData, Vec2 } from "./types";
 import { midpoint } from "./utils";
 /**
  * Ported from python
@@ -196,7 +196,7 @@ class SimpleGlyph {
     return simpleGlyph;
   }
 
-  getGlyphData(fontSize: number): GlpyhData {
+  getGlyphData(fontSize: number = 100): GlpyhData {
     // TODO deal with fontSizes
     const glyphData: GlpyhData = [];
     let startIndex = 0;
@@ -268,7 +268,14 @@ class SimpleGlyph {
       startIndex = length + 1;
     });
 
-    return glyphData;
+    return glyphData.map((contour) =>
+      contour.map(
+        (curve) =>
+          curve.map(
+            (vec) => vec.map((p) => (p * fontSize) / 100) as Vec2
+          ) as CubicCurve
+      )
+    );
   }
 
   transform(scaleX: number, scaleY: number, offsetX: number, offsetY: number) {

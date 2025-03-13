@@ -1,6 +1,7 @@
-import { Contour, CubicCurve, GlpyhData, Vec2 } from "./types";
+import { Contour, GlpyhData, Vec2 } from "./types";
 import { midpoint } from "./utils";
 /**
+ * Ported from python
  * @link https://github.com/Arunjoseph3007/fontsa/tree/main
  */
 
@@ -185,11 +186,18 @@ class SimpleGlyph {
 
     const points: Vec2[] = xCoords.map((x, i) => [x, yCoords[i]]);
 
-    return new SimpleGlyph(numberOfContours, endPtsOfContours, flags, points);
+    const simpleGlyph = new SimpleGlyph(
+      numberOfContours,
+      endPtsOfContours,
+      flags,
+      points
+    );
+    simpleGlyph.transform(1, -1, 0, 0);
+    return simpleGlyph;
   }
 
   getGlyphData(fontSize: number): GlpyhData {
-    // TODO deal with vertical flipping and fontSizes
+    // TODO deal with fontSizes
     const glyphData: GlpyhData = [];
     let startIndex = 0;
     let index = 0;
@@ -607,7 +615,7 @@ export class Font {
       const compLoc =
         this.fontDirectory["glyf"].offset + this.locaTable[glyphIndex];
       const glyphComponent = this.parseGlyph(reader, compLoc);
-      glyphComponent.transform(scaleX, scaleY, offsetX, offsetY);
+      glyphComponent.transform(scaleX, -scaleY, offsetX, offsetY);
       reader.goto(curLoc);
 
       const currentTotalPoints = compGlyph.points.length;

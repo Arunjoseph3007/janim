@@ -22,7 +22,7 @@ class MyScene extends Scene {
             .Letter(c, "Montserrat")
             .translateX(100)
             .translateY(400)
-            .scale(0.5, -0.5)
+            .scale(0.5, 0.5)
             .fill("pink")
             .setFillOpacity(0.5)
         );

@@ -27,7 +27,7 @@ const GoogleFonstJson = (await import("./googleFonts.json")) as {
   default: Record<string, string>;
 };
 
-const todo = (): never => {
+export const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
 
@@ -141,6 +141,10 @@ export const Easings = {
   linear,
   quadratic,
   cubic,
+  ease: cubic([0.25, 0.1], [0.25, 1]),
+  easeIn: cubic([0.42, 0], [1, 1]),
+  easeOut: cubic([0, 0], [0.58, 1]),
+  easeInOut: cubic([0.42, 0], [0.58, 1]),
 };
 
 const __dummyElm = document.createElement("div");

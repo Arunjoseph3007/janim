@@ -144,20 +144,29 @@ class MyScene extends Scene {
     }
     // Easing functions
     else if (1) {
-      const sql = jf.Rectangle(200, 100).fill("red").translate(150, 100);
-      const sqq = jf.Rectangle(200, 100).fill("magenta").translate(150, 250);
-      const sqc = jf.Rectangle(200, 100).fill("yellow").translate(150, 400);
-      this.add(sql, sqq, sqc);
+      const sq1 = jf.Rectangle(200, 100).fill("red").translate(150, 100);
+      const sq2 = jf.Rectangle(200, 100).fill("magenta").translate(150, 250);
+      const sq3 = jf.Rectangle(200, 100).fill("yellow").translate(150, 400);
+      const sq4 = jf.Rectangle(200, 100).fill("yellow").translate(150, 550);
+      this.add(sq1, sq2, sq3, sq4);
 
-      const l = jf.Translate(sql, null, [400, 100]).ease(Easings.linear);
-      const q = jf
-        .Translate(sqq, null, [400, 250])
-        .ease(Easings.quadratic([1, 0]));
-      const c = jf
-        .Translate(sqc, null, [400, 400])
-        .ease(Easings.cubic([0.42, 0], [0.58, 1]));
+      ["ease", "easeIn", "easeOut", "easeInOut"]
+        .map((e, i) =>
+          jf
+            .Text(e, "JetBrainsMono")
+            .fill("pink")
+            .setFillOpacity(0.5)
+            .translate(700, 120 + 150 * i)
+            .setFontSize(6)
+        )
+        .forEach((a) => this.add(a));
 
-      await this.playAll(l, q, c);
+      await this.playAll(
+        jf.Translate(sq1, null, [600, 100]).ease(Easings.ease),
+        jf.Translate(sq2, null, [600, 250]).ease(Easings.easeIn),
+        jf.Translate(sq3, null, [600, 400]).ease(Easings.easeOut),
+        jf.Translate(sq4, null, [600, 550]).ease(Easings.easeInOut)
+      );
     }
   }
 }

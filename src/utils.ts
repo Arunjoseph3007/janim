@@ -58,7 +58,7 @@ export const solveQuadEQ = (
   c: number
 ): [number, number] => {
   const disc = b * b - 4 * a * c;
-  console.assert(disc > 0, "No real roots of equation");
+  console.assert(disc >= 0, "No real roots of equation");
   const d = Math.sqrt(disc);
   return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
 };
@@ -72,15 +72,19 @@ export const differentiatePolynomial = (poly: number[]) => {
   return derivative;
 };
 
-const fAt = (poly: number[], x: number) =>
-  poly.map((c, i) => c * x ** i).reduce((a, c) => a + c, 0);
+const fAt = (poly: number[], x: number) => {
+  let ans = 0;
+  for (let i = 0; i < poly.length; i++) {
+    ans += poly[i] * x ** i;
+  }
+  return ans;
+};
 
 export const solvePolynomial = (
-  poly: number[],
-  startPoint = 1,
+  y: number[],
+  startPoint = 0.54321,
   precision = 0.01
 ) => {
-  let y = poly.map((a) => a).reverse();
   let dy = differentiatePolynomial(y);
 
   let root = startPoint;

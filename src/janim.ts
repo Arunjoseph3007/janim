@@ -20,6 +20,7 @@ import {
   lerpVec2,
   lerpGlyph,
   translateGlyph,
+  solvePolynomial,
 } from "./utils";
 
 const GoogleFonstJson = (await import("./googleFonts.json")) as {
@@ -95,24 +96,36 @@ const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
   );
 
 const linear: EasingFunc = (t) => t;
-const quadratic: (cp: Vec2) => EasingFunc = (cp) => {
+const quadratic: (cp: Vec2) => EasingFunc = function (cp) {
+  console.assert(
+    cp[0] >= 0 && cp[0] <= 1 && cp[1] >= 0 && cp[1] <= 1,
+    "Control point must be withing 0-1 range"
+  );
+
   return function (x) {
     const a = 1 - 2 * cp[0];
     const b = 2 * cp[0];
     const c = -x;
 
     const [t1, t2] = solveQuadEQ(a, b, c);
-
     const t = t1 >= 0 && t1 <= 1 ? t1 : t2;
-    const y = t * t * (1 - 2 * cp[1]) + 2 * t + cp[1];
 
+    const y = 2 * t * (1 - t) * cp[1] + t * t;
     return y;
   };
 };
-const cubic: (a: Vec2, b: Vec2) => EasingFunc = (_a, _b) => {
-  todo();
-  return function (t) {
-    return t;
+const cubic: (p1: Vec2, p2: Vec2) => EasingFunc = function (p1, p2) {
+  return function (x) {
+    const a = 3 * p1[0] - 3 * p2[0] + 1;
+    const b = 3 * p2[0] - 6 * p1[0];
+    const c = 3 * p1[0];
+    const d = -x;
+
+    const t = solvePolynomial([d, c, b, a]);
+    const y =
+      3 * (1 - t) * (1 - t) * t * p1[1] + 3 * (1 - t) * t * t * p2[1] + t ** 3;
+
+    return y;
   };
 };
 export const Easings = {
@@ -393,7 +406,7 @@ export class VObject extends JObject {
 /**
  * @deprecated I dont think this will be useful anymore
  */
-class _Text extends JObject {
+export class _Text extends JObject {
   text: string;
   mode: ColoringMode;
   maxWidth?: number;
@@ -939,7 +952,7 @@ export class Sequence extends JAnimation {
   }
 }
 
-export class Scene {
+export abstract class Scene {
   objects: JObject[] = [];
   selfCenter = false;
   runTimeMs = 0;
@@ -975,9 +988,11 @@ export class Scene {
     this.running = !this.running;
   }
 
-  add(obj: JObject) {
-    this.remove(obj);
-    this.objects.push(obj);
+  add(...objs: JObject[]) {
+    objs.forEach((obj) => {
+      this.remove(obj);
+      this.objects.push(obj);
+    });
   }
 
   remove(obj: JObject) {
@@ -1026,13 +1041,15 @@ export class Scene {
     });
   }
 
+  async playAll(...anims: JAnimation[]) {
+    await this.play(new Parallel(...anims));
+  }
+
   wait(durationMs = 1000) {
     return this.play(new Wait(durationMs));
   }
 
-  construct() {
-    todo();
-  }
+  abstract construct(): void;
 
   render() {
     if (this.selfCenter) {
@@ -1049,7 +1066,6 @@ type _CP<T extends abstract new (...args: any) => any> =
   ConstructorParameters<T>;
 
 export const jf = {
-  Scene: (...a: _CP<typeof Scene>) => new Scene(...a),
   // Utils
   RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
   // JObjects

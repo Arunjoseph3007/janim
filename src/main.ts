@@ -1,4 +1,4 @@
-import { Scene, jf, loadFontFromUri } from "./janim";
+import { Easings, Scene, jf, loadFontFromUri } from "./janim";
 import "./style.css";
 import { range } from "./utils";
 
@@ -133,7 +133,7 @@ class MyScene extends Scene {
       await this.play(vm);
     }
     // Custom Updaters
-    else if (1) {
+    else if (0) {
       const c = jf.Circle(200).fill("red");
       // const c = jf.Text("hahahah", "Montserrat").fill("pink").setFontSize(3);
       c.addUpdaters((o) => {
@@ -141,6 +141,23 @@ class MyScene extends Scene {
       });
       this.add(c);
       this.wait(10000000);
+    }
+    // Easing functions
+    else if (1) {
+      const sql = jf.Rectangle(200, 100).fill("red").translate(150, 100);
+      const sqq = jf.Rectangle(200, 100).fill("magenta").translate(150, 250);
+      const sqc = jf.Rectangle(200, 100).fill("yellow").translate(150, 400);
+      this.add(sql, sqq, sqc);
+
+      const l = jf.Translate(sql, null, [400, 100]).ease(Easings.linear);
+      const q = jf
+        .Translate(sqq, null, [400, 250])
+        .ease(Easings.quadratic([1, 0]));
+      const c = jf
+        .Translate(sqc, null, [400, 400])
+        .ease(Easings.cubic([0.42, 0], [0.58, 1]));
+
+      await this.playAll(l, q, c);
     }
   }
 }

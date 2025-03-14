@@ -973,6 +973,8 @@ export abstract class Scene {
   ctx: CanvasRenderingContext2D;
   dt = 0;
   running = false;
+  private isRecording = false;
+  private mRecoder: MediaRecorder;
   private mouse: Vec2 = [0, 0];
   private loc: Vec2;
 
@@ -985,10 +987,41 @@ export abstract class Scene {
       this.mouse[0] = e.clientX - this.loc[0];
       this.mouse[1] = e.clientY - this.loc[1];
     });
+
+    const stream = this.ctx.canvas.captureStream(0);
+    this.mRecoder = new MediaRecorder(stream, {
+      mimeType: "video/mp4;codecs=avc1",
+    });
   }
 
   getMouse() {
     return this.mouse;
+  }
+
+  startRecording() {
+    console.assert(this.mRecoder.state == "inactive", "Already recording");
+
+    this.isRecording = true;
+
+    const chunks: Blob[] = [];
+    this.mRecoder.onerror = console.log;
+    this.mRecoder.onstop = () => {
+      const file = new Blob(chunks, { type: this.mRecoder.mimeType });
+      const url = URL.createObjectURL(file);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "janim.mp4";
+      anchor.click();
+    };
+    this.mRecoder.ondataavailable = (e) => {
+      chunks.push(e.data);
+    };
+
+    this.mRecoder.start();
+  }
+  stopRecording() {
+    this.isRecording = false;
+    this.mRecoder.stop();
   }
 
   pause() {
@@ -1026,7 +1059,8 @@ export abstract class Scene {
       let prevT = 0;
 
       const loop: FrameRequestCallback = (t) => {
-        dt = t - prevT;
+        // When recording have a steady FPS
+        dt = this.isRecording ? 1000 / 60 : t - prevT;
         prevT = t;
 
         if (this.running) {
@@ -1036,6 +1070,11 @@ export abstract class Scene {
           );
           this.render();
           playTime += dt;
+        }
+
+        if (this.isRecording) {
+          // @ts-ignore
+          this.mRecoder.stream.getVideoTracks()?.[0]?.requestFrame();
         }
 
         if (playTime < anim.durationMs) {

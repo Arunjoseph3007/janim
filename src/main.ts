@@ -114,7 +114,7 @@ class MyScene extends Scene {
       await this.play(morph);
     }
     // Text
-    else if (0) {
+    else if (1) {
       const t = jf
         .Text("Text is just vector objects", "Montserrat")
         .fill("pink")
@@ -143,7 +143,7 @@ class MyScene extends Scene {
       this.wait(10000000);
     }
     // Easing functions
-    else if (1) {
+    else if (0) {
       const sq1 = jf.Rectangle(200, 100).fill("red").translate(150, 100);
       const sq2 = jf.Rectangle(200, 100).fill("magenta").translate(150, 250);
       const sq3 = jf.Rectangle(200, 100).fill("yellow").translate(150, 400);
@@ -193,6 +193,10 @@ async function main() {
   document.addEventListener("keypress", (e) => {
     if (e.key == " ") {
       sc.togglePlayState();
+    } else if (e.key == "r") {
+      sc.startRecording();
+    } else if (e.key == "s") {
+      sc.stopRecording();
     }
   });
 

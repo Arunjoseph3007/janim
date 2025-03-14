@@ -115,6 +115,14 @@ const quadratic: (cp: Vec2) => EasingFunc = function (cp) {
   };
 };
 const cubic: (p1: Vec2, p2: Vec2) => EasingFunc = function (p1, p2) {
+  console.assert(
+    p1[0] >= 0 && p1[0] <= 1 && p1[1] >= 0 && p1[1] <= 1,
+    "Control points must be withing 0-1 range"
+  );
+  console.assert(
+    p2[0] >= 0 && p2[0] <= 1 && p2[1] >= 0 && p2[1] <= 1,
+    "Control points must be withing 0-1 range"
+  );
   return function (x) {
     const a = 3 * p1[0] - 3 * p2[0] + 1;
     const b = 3 * p2[0] - 6 * p1[0];
@@ -122,6 +130,7 @@ const cubic: (p1: Vec2, p2: Vec2) => EasingFunc = function (p1, p2) {
     const d = -x;
 
     const t = solvePolynomial([d, c, b, a]);
+
     const y =
       3 * (1 - t) * (1 - t) * t * p1[1] + 3 * (1 - t) * t * t * p2[1] + t ** 3;
 

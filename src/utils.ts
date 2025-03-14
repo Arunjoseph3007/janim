@@ -1,14 +1,15 @@
 import { Contour, CubicCurve, GlpyhData, TLerpFunc, Vec2 } from "./types";
 
+const { max, min, abs, sin, cos } = Math;
+
 export const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
 
 export const polarToXY = (r: number, theta: number): Vec2 => [
-  r * Math.cos(theta),
-  r * Math.sin(theta),
+  r * cos(theta),
+  r * sin(theta),
 ];
 
-export const clamp = (v: number, min = 0, max = 1) =>
-  Math.min(max, Math.max(v, min));
+export const clamp = (v: number, minV = 0, maxV = 1) => min(maxV, max(v, minV));
 
 export const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
 export const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
@@ -89,7 +90,7 @@ export const solvePolynomial = (
 
   let root = startPoint;
   let fAtRoot = fAt(y, root);
-  while (fAtRoot > precision) {
+  while (abs(fAtRoot) > precision) {
     root = root - fAtRoot / fAt(dy, root);
     fAtRoot = fAt(y, root);
   }

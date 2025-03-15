@@ -9,6 +9,7 @@ import {
   EasingFunc,
   Contour,
   GlpyhData,
+  Bounds,
 } from "./types";
 import {
   lerpNum,
@@ -158,7 +159,7 @@ const colorToRGBA = (color: string) => {
 type JObjectUpdater = (obj: JObject, t: number) => void;
 
 export abstract class JObject {
-  _strokeStyle: RGBA = WHITE;
+  _strokeStyle: RGBA | CanvasGradient = WHITE;
   _fillStyle: RGBA = TRANSPARENT;
   strokeWidth = 1;
   translation: Vec2 = [0, 0];
@@ -192,7 +193,9 @@ export abstract class JObject {
     return this;
   }
   setStrokeOpacity(o: number) {
-    this._strokeStyle.a = o;
+    if (this._strokeStyle instanceof RGBA) {
+      this._strokeStyle.a = o;
+    }
     return this;
   }
   stroke(c: string) {
@@ -200,11 +203,18 @@ export abstract class JObject {
     return this;
   }
 
-  set strokeStyle(c: string) {
-    this._strokeStyle = colorToRGBA(c);
+  set strokeStyle(c: string | CanvasGradient) {
+    if (typeof c == "string") this._strokeStyle = colorToRGBA(c);
+    else {
+      this._strokeStyle = c;
+    }
   }
   get strokeStyle() {
-    return this._strokeStyle.toStyle();
+    if (this._strokeStyle instanceof RGBA) {
+      return this._strokeStyle.toStyle();
+    } else {
+      return this._strokeStyle;
+    }
   }
 
   translateX(x: number) {
@@ -358,6 +368,37 @@ export class VObject extends JObject {
   quadTo(control: Vec2, point: Vec2) {
     this.addCurve([[...this.pos()], control, control, point]);
     return this;
+  }
+  getBounds(): Bounds {
+    let top = Infinity;
+    let left = Infinity;
+    let bottom = -Infinity;
+    let right = -Infinity;
+
+    for (const contour of this.glyphData) {
+      for (const curve of contour) {
+        if (curve[0][0] < left) left = curve[0][0];
+        if (curve[3][0] < left) left = curve[3][0];
+
+        if (curve[0][0] > right) right = curve[0][0];
+        if (curve[3][0] > right) right = curve[3][0];
+
+        if (curve[0][1] < top) top = curve[0][1];
+        if (curve[3][1] < top) top = curve[3][1];
+
+        if (curve[0][1] > bottom) bottom = curve[0][1];
+        if (curve[3][1] > bottom) bottom = curve[3][1];
+      }
+    }
+
+    return {
+      top,
+      left,
+      bottom,
+      right,
+      height: bottom - top,
+      width: right - left,
+    };
   }
   render(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();
@@ -652,7 +693,8 @@ export abstract class JAnimation {
 
   constructor() {}
 
-  abstract step(dt: number): void;
+  // TODO: not sure if we want to pass context here. Feels wrong semantically
+  abstract step(dt: number, ctx: CanvasRenderingContext2D): void;
 
   in(durationMs: number) {
     this.durationMs = durationMs;
@@ -818,10 +860,10 @@ export class Parallel extends JAnimation {
     this.updateDurationMs();
   }
 
-  step(dt: number): void {
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
     this.runTimeMs += dt;
 
-    this.anims.forEach((anim) => anim.step(dt));
+    this.anims.forEach((anim) => anim.step(dt, ctx));
 
     if (this.anims.every((anim) => anim.done)) {
       this.done = true;
@@ -839,12 +881,12 @@ export class Repeat extends JAnimation {
     this.durationMs = this.anim.durationMs * times;
   }
 
-  step(dt: number): void {
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
     this.runTimeMs += dt;
 
     const t = this.runTimeMs / this.durationMs;
 
-    this.anim.step(dt);
+    this.anim.step(dt, ctx);
 
     if (this.anim.done) {
       if (t > 1) {
@@ -953,15 +995,75 @@ export class Sequence extends JAnimation {
     this.updateDurationMs();
   }
 
-  step(dt: number): void {
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
     this.runTimeMs += dt;
 
     const currAnim = this.anims.find((anim) => !anim.done);
-    currAnim?.step(dt);
+    currAnim?.step(dt, ctx);
 
     if (this.anims.every((anim) => anim.done)) {
       this.done = true;
     }
+  }
+}
+export class Stroke extends JAnimation {
+  obj: VObject;
+  easing: EasingFunc = linear;
+  bound: Bounds;
+  fadeAmt = 0.05;
+  color: RGBA;
+  constructor(obj: VObject) {
+    super();
+    this.obj = obj;
+    if (this.obj._strokeStyle instanceof RGBA) {
+      this.color = this.obj._strokeStyle;
+    } else {
+      throw new Error("Expected _strokeStyle to be RGBA");
+    }
+    this.bound = obj.getBounds();
+  }
+
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
+    this.runTimeMs += dt;
+    let t = this.runTimeMs / this.durationMs;
+    t = clamp(t);
+    t = this.easing(t);
+
+    const grad = ctx.createLinearGradient(
+      this.bound.left,
+      this.bound.top,
+      this.bound.right,
+      this.bound.bottom
+    );
+
+    grad.addColorStop(clamp(t), this.color.toStyle());
+    grad.addColorStop(clamp(t), this.color.toStyle());
+    grad.addColorStop(clamp(t + this.fadeAmt), "transparent");
+
+    this.obj._strokeStyle = grad;
+
+    if (this.runTimeMs > this.durationMs) {
+      this.done = true;
+    }
+  }
+}
+export class Create extends Sequence {
+  obj: VObject;
+  constructor(obj: VObject) {
+    super();
+    this.obj = obj;
+
+    this.add(
+      new Stroke(this.obj),
+      new ColorMorph(
+        obj,
+        TRANSPARENT,
+        this.obj._fillStyle,
+        ColoringMode.FillOnly
+      )
+    );
+
+    this.obj.fillStyle = "transparent";
   }
 }
 
@@ -1064,7 +1166,7 @@ export abstract class Scene {
         prevT = t;
 
         if (this.running) {
-          anim.step(dt);
+          anim.step(dt, this.ctx);
           this.objects.forEach((obj) =>
             obj.updaters.forEach((upd) => upd(obj, playTime))
           );
@@ -1140,4 +1242,6 @@ export const jf = {
   Morph: (...a: _CP<typeof Morph>) => new Morph(...a),
   ShapeMorph: (...a: _CP<typeof ShapeMorph>) => new ShapeMorph(...a),
   VMorph: (...a: _CP<typeof VMorph>) => new VMorph(...a),
+  Stroke: (...a: _CP<typeof Stroke>) => new Stroke(...a),
+  Create: (...a: _CP<typeof Create>) => new Create(...a),
 };

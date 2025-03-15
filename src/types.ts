@@ -15,3 +15,12 @@ export enum ColoringMode {
   FillOnly = "FillOnly",
   StrokeAndFill = "StrokeAndFill",
 }
+
+export type Bounds = {
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+  width: number;
+  height: number;
+};

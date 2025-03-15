@@ -114,7 +114,7 @@ class MyScene extends Scene {
       await this.play(morph);
     }
     // Text
-    else if (1) {
+    else if (0) {
       const t = jf
         .Text("Text is just vector objects", "Montserrat")
         .fill("pink")
@@ -167,6 +167,27 @@ class MyScene extends Scene {
         jf.Translate(sq3, null, [600, 400]).ease(Easings.easeOut),
         jf.Translate(sq4, null, [600, 550]).ease(Easings.easeInOut)
       );
+    }
+    // Stroke
+    else if (1) {
+      const sq = jf
+        .Rectangle(600, 200)
+        .fill("transparent")
+        .stroke("pink")
+        .fill("#00ffff66")
+        .setStrokeWidth(5)
+        .translate(400, 200);
+      const ci = jf
+        .Circle(150)
+        .translate(300, 500)
+        .stroke("#ffff0066")
+        .fill("#ffff0066")
+        .setStrokeWidth(15);
+      this.add(sq, ci);
+      const st = jf.Create(sq);
+      const ct = jf.Create(ci);
+
+      await this.playAll(st, ct);
     }
   }
 }

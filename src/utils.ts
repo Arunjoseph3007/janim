@@ -4,6 +4,15 @@ const { max, min, abs, sin, cos } = Math;
 
 export const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
 
+export const stepRange = (start: number, end: number, step = 1) => {
+  const array: number[] = [];
+  for (let i = start; i < end; i += step) array.push(i);
+  return array;
+};
+
+export const subdivide = (start: number, end: number, divisions: number) =>
+  stepRange(start, end, (end - start) / divisions);
+
 export const polarToXY = (r: number, theta: number): Vec2 => [
   r * cos(theta),
   r * sin(theta),

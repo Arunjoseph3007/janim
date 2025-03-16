@@ -169,7 +169,7 @@ class MyScene extends Scene {
       );
     }
     // Stroke
-    else if (1) {
+    else if (0) {
       const sq = jf
         .Rectangle(600, 200)
         .fill("transparent")
@@ -188,6 +188,16 @@ class MyScene extends Scene {
       const ct = jf.Create(ci);
 
       await this.playAll(st, ct);
+    }
+    // Axes and plotting
+    else if (1) {
+      const axes = jf.Axes({});
+      this.add(axes);
+
+      const s = axes.plot(Math.sin).stroke("#44aa44");
+      const c = axes.plot(Math.cos).stroke("#aa4444");
+      const sq = axes.plot((x) => x ** 2).stroke("#4444aa");
+      this.add(s, c, sq);
     }
   }
 }

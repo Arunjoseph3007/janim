@@ -22,6 +22,7 @@ import {
   lerpGlyph,
   translateGlyph,
   solvePolynomial,
+  subdivide,
 } from "./utils";
 
 const GoogleFonstJson = (await import("./googleFonts.json")) as {
@@ -85,8 +86,8 @@ export class RGBA {
     return this.toStyle();
   }
 }
-const WHITE = new RGBA(1, 1, 1);
-const TRANSPARENT = new RGBA(1, 1, 0);
+const WHITE = new RGBA(255, 255, 255);
+const TRANSPARENT = new RGBA(1, 1, 1, 0);
 
 const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
   new RGBA(
@@ -407,7 +408,7 @@ export class VObject extends JObject {
       ctx.moveTo(startPoint[0], startPoint[1]);
 
       contour.forEach((curve) => {
-        ctx.lineTo(curve[0][0], curve[0][1]);
+        // ctx.lineTo(curve[0][0], curve[0][1]);
         ctx.bezierCurveTo(
           curve[1][0],
           curve[1][1],
@@ -418,7 +419,7 @@ export class VObject extends JObject {
         );
       });
 
-      ctx.lineTo(startPoint[0], startPoint[1]);
+      // ctx.lineTo(startPoint[0], startPoint[1]);
     });
     ctx.stroke();
     ctx.fill();
@@ -682,6 +683,101 @@ export class Group extends JObject {
 
   render(ctx: CanvasRenderingContext2D): void {
     this.objs.forEach((obj) => obj.render(ctx));
+  }
+}
+type LabelOptions = {
+  x?: null | string;
+  y?: null | string;
+};
+type AxesOptions = {
+  arrows?: boolean;
+  labels?: LabelOptions;
+  range?: Vec2;
+};
+type PlotFunc = (x: number) => number;
+export class Axes extends JObject {
+  options: Required<AxesOptions>;
+  constructor({
+    arrows = true,
+    labels = { x: "x", y: "y" },
+    range,
+  }: AxesOptions) {
+    super();
+    if (!range) {
+      range = [-10, 10];
+    }
+    this.options = { arrows, labels, range };
+  }
+  render(ctx: CanvasRenderingContext2D): void {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+    const pad = 50;
+    const arrowLen = 12;
+
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "white";
+    ctx.font = "italic 25px Georgia";
+
+    // X Axis
+    {
+      ctx.beginPath();
+      ctx.moveTo(-w / 2 + pad, 0);
+      ctx.lineTo(w / 2 - pad, 0);
+      ctx.stroke();
+
+      if (this.options.arrows) {
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 + pad + arrowLen, -arrowLen);
+        ctx.lineTo(-w / 2 + pad, 0);
+        ctx.lineTo(-w / 2 + pad + arrowLen, +arrowLen);
+
+        ctx.moveTo(w / 2 - pad - arrowLen, -arrowLen);
+        ctx.lineTo(w / 2 - pad, 0);
+        ctx.lineTo(w / 2 - pad - arrowLen, +arrowLen);
+        ctx.stroke();
+      }
+
+      if (this.options.labels.x) {
+        ctx.fillText(this.options.labels.x, w / 2 - pad - 20, -20);
+      }
+    }
+    // Y Axis
+    {
+      ctx.beginPath();
+      ctx.moveTo(0, -h / 2 + pad);
+      ctx.lineTo(0, h / 2 - pad);
+      ctx.stroke();
+
+      if (this.options.arrows) {
+        ctx.beginPath();
+        ctx.moveTo(-arrowLen, -h / 2 + pad + arrowLen);
+        ctx.lineTo(0, -h / 2 + pad);
+        ctx.lineTo(+arrowLen, -h / 2 + pad + arrowLen);
+
+        ctx.moveTo(-arrowLen, h / 2 - pad - arrowLen);
+        ctx.lineTo(0, h / 2 - pad);
+        ctx.lineTo(+arrowLen, h / 2 - pad - arrowLen);
+        ctx.stroke();
+      }
+
+      if (this.options.labels.y) {
+        ctx.fillText(this.options.labels.y, 0 + 20, -h / 2 + pad + 20);
+      }
+    }
+  }
+  plot(func: PlotFunc) {
+    const plottedGraph = new VObject();
+    const [start, end] = this.options.range;
+
+    const factor = (16 * 70 - 2 * 50) / (end - start);
+    subdivide(start, end, 200).forEach((x) => {
+      const y = func(x);
+      const rx = x * factor;
+      const ry = y * factor;
+      plottedGraph.cubicTo([rx, ry], [rx, ry], [rx, ry]);
+    });
+
+    return plottedGraph;
   }
 }
 
@@ -1069,7 +1165,7 @@ export class Create extends Sequence {
 
 export abstract class Scene {
   objects: JObject[] = [];
-  selfCenter = false;
+  selfCenter = true;
   runTimeMs = 0;
   done = false;
   ctx: CanvasRenderingContext2D;
@@ -1230,6 +1326,7 @@ export const jf = {
   VObject: (...a: _CP<typeof VObject>) => new VObject(...a),
   Text: (...a: _CP<typeof Text>) => new Text(...a),
   Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
+  Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),

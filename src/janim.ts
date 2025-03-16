@@ -408,7 +408,7 @@ export class VObject extends JObject {
       ctx.moveTo(startPoint[0], startPoint[1]);
 
       contour.forEach((curve) => {
-        // ctx.lineTo(curve[0][0], curve[0][1]);
+        ctx.lineTo(curve[0][0], curve[0][1]);
         ctx.bezierCurveTo(
           curve[1][0],
           curve[1][1],
@@ -419,7 +419,7 @@ export class VObject extends JObject {
         );
       });
 
-      // ctx.lineTo(startPoint[0], startPoint[1]);
+      ctx.lineTo(startPoint[0], startPoint[1]);
     });
     ctx.stroke();
     ctx.fill();
@@ -770,13 +770,20 @@ export class Axes extends JObject {
     const [start, end] = this.options.range;
 
     const factor = (16 * 70 - 2 * 50) / (end - start);
-    subdivide(start, end, 200).forEach((x) => {
+    subdivide(start, end, 100).forEach((x) => {
       const y = func(x);
-      const rx = x * factor;
-      const ry = y * factor;
-      plottedGraph.cubicTo([rx, ry], [rx, ry], [rx, ry]);
+      // TODO not sure about translation hack
+      const rx = x * factor + this.translation[0];
+      const ry = -y * factor + this.translation[1];
+      plottedGraph.addCurve([
+        [rx, ry],
+        [rx, ry],
+        [rx, ry],
+        [rx, ry],
+      ]);
     });
 
+    plottedGraph.setStrokeWidth(3);
     return plottedGraph;
   }
 }

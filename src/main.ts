@@ -195,9 +195,15 @@ class MyScene extends Scene {
       this.add(axes);
 
       const s = axes.plot(Math.sin).stroke("#44aa44");
-      const c = axes.plot(Math.cos).stroke("#aa4444");
-      const sq = axes.plot((x) => x ** 2).stroke("#4444aa");
-      this.add(s, c, sq);
+      // const c = axes.plot(Math.cos).stroke("#aa4444");
+      const t = axes.plot(Math.cos).stroke("teal");
+
+      this.add(s);
+
+      const vm = jf.VMorph(s, t);
+
+      this.ctx.scale(0.1,0.1)
+      await this.play(vm);
     }
   }
 }

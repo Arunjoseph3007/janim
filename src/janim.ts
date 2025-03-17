@@ -765,6 +765,10 @@ type AxesOptions = {
   labels?: LabelOptions;
   range?: Vec2;
 };
+type PlotOptions = {
+  range?: Vec2;
+  divisions?: number;
+};
 type PlotFunc = (x: number) => number;
 export class Axes extends JObject {
   options: Required<AxesOptions>;
@@ -836,18 +840,25 @@ export class Axes extends JObject {
       }
     }
   }
-  plot(func: PlotFunc) {
+  plot(func: PlotFunc, options: PlotOptions = {}) {
     const plottedGraph = new VObject();
-    const [start, end] = this.options.range;
+    const factor =
+      (16 * 70 - 2 * 50) / (this.options.range[1] - this.options.range[0]);
+    let [start, end] = this.options.range;
 
-    const factor = (16 * 70 - 2 * 50) / (end - start);
-    subdivide(start, end, 100).forEach((x) => {
+    if (options.range) {
+      start = Math.max(start, options.range[0]);
+      end = Math.min(end, options.range[1]);
+    }
+
+    const numDivs = options.divisions ?? 100;
+    subdivide(start, end, numDivs).forEach((x) => {
       const y = func(x);
+      if (isNaN(y)) return;
       // TODO not sure about translation hack
       const rx = x * factor + this.translation[0];
       const ry = -y * factor + this.translation[1];
 
-      if (isNaN(rx) || isNaN(ry)) return;
       plottedGraph.addCurve([
         [rx, ry],
         [rx, ry],

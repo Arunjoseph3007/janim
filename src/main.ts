@@ -190,27 +190,19 @@ class MyScene extends Scene {
       await this.playAll(st, ct);
     }
     // Axes and plotting
-    else if (0) {
+    else if (1) {
       this.selfCenter = true;
       const axes = jf.Axes({});
       this.add(axes);
 
       const sq = axes.plot((x) => x * x).stroke("#23d997");
-      const s = axes.plot(Math.sin).stroke("teal");
-      const t = axes.plot(Math.log).stroke("red");
-      this.add(sq);
-
-      const cube = jf
-        .Rectangle(100, 100)
-        .translate(100, -100)
-        .fill("teal")
+      const s = axes.plot(Math.sin).stroke("teal").setStrokeOpacity(0.2);
+      const s1 = axes
+        .plot(Math.sin, { range: [2, 6], divisions: 30 })
         .stroke("yellow")
-        .setStrokeWidth(3);
-      this.add(cube);
-      await this.playAll(
-        cube.animate.fadeIn(),
-        cube.animate.spin(Math.PI / 4).ease(Easings.easeInOut)
-      );
+        .setStrokeWidth(4);
+      const t = axes.plot(Math.log).stroke("red");
+      this.add(sq, s, s1);
 
       await this.play(sq.become(s));
       await this.play(sq.become(t));
@@ -232,7 +224,7 @@ class MyScene extends Scene {
       await this.play(jf.Morph(i1, i2));
     }
     // Tracker
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       const tr = this.createTracker(0);
       const va = tr.animate.set(-100).ease(Easings.easeInOut);

@@ -169,7 +169,7 @@ class MyScene extends Scene {
       );
     }
     // Stroke
-    else if (1) {
+    else if (0) {
       const sq = jf
         .Rectangle(200, 200)
         .fill("transparent")
@@ -216,7 +216,7 @@ class MyScene extends Scene {
       await this.play(sq.become(t));
     }
     // Images
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       const uri =
         "https://images.pexels.com/photos/674010/pexels-photo-674010.jpeg?cs=srgb&dl=pexels-anjana-c-169994-674010.jpg&fm=jpg";
@@ -225,11 +225,27 @@ class MyScene extends Scene {
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtnvAOajH9gS4C30cRF7rD_voaTAKly2Ntaw&s";
 
       const i1 = Image.fromURI(uri).rotateDeg(45);
-      const i2 = Image.fromURI(uri2).translate(100,100);
+      const i2 = Image.fromURI(uri2).translate(100, 100);
 
       this.add(i1, i2);
 
       await this.play(jf.Morph(i1, i2));
+    }
+    // Tracker
+    else if (1) {
+      this.selfCenter = true;
+      const tr = this.createTracker(0);
+      const va = tr.animate.set(-100).ease(Easings.easeInOut);
+
+      const c = jf.Circle(100).translateX(-200);
+      const s = jf.Rectangle(100, 100).translateX(200);
+
+      c.addUpdaters((o) => o.setTranslateY(tr.getValue()));
+      s.addUpdaters((o) => o.setTranslateY(tr.getValue()));
+
+      this.add(c, s);
+
+      await this.play(va);
     }
   }
 }

@@ -327,6 +327,36 @@ export abstract class JObject {
 
   abstract render(ctx: CanvasRenderingContext2D): void;
 }
+type TrackerUpdater = (obj: Tracker, t: number) => void;
+// TODO not finalized, may rework the design
+class Tracker {
+  value: number;
+  updaters: TrackerUpdater[] = [];
+
+  constructor(value: number) {
+    this.value = value;
+  }
+  // Updater funcs
+  addUpdaters(...updaters: TrackerUpdater[]) {
+    this.updaters.push(...updaters);
+    return this;
+  }
+  removeUpdater(updater: TrackerUpdater) {
+    this.updaters = this.updaters.filter((up) => up != updater);
+    return this;
+  }
+  getValue() {
+    return this.value;
+  }
+  setValue(v: number) {
+    this.value = v;
+  }
+  get animate() {
+    return {
+      set: (to: number) => new SetTrackerValue(this, null, to),
+    };
+  }
+}
 export class VObject extends JObject {
   glyphData: GlpyhData;
 
@@ -896,6 +926,20 @@ export abstract class SimplePropertyAnim extends JAnimation {
 
   onFinish() {}
 }
+class SetTrackerValue extends SimplePropertyAnim {
+  tr: Tracker;
+  from: number;
+  to: number;
+  constructor(tr: Tracker, from: number | null, to: number) {
+    super();
+    this.tr = tr;
+    this.from = from ?? tr.getValue();
+    this.to = to;
+  }
+  protected updateProperty(t: number): void {
+    this.tr.setValue(lerpNum(t, this.from, this.to));
+  }
+}
 export class Translate extends SimplePropertyAnim {
   obj: JObject;
   from: Vec2;
@@ -1275,6 +1319,7 @@ export abstract class Scene {
   private mRecoder: MediaRecorder;
   private mouse: Vec2 = [0, 0];
   private loc: Vec2;
+  private trackers: Tracker[] = [];
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -1349,6 +1394,20 @@ export abstract class Scene {
     this.render();
   }
 
+  createTracker(initial: number) {
+    const t = new Tracker(initial);
+    this.addTracker(t);
+    return t;
+  }
+
+  addTracker(t: Tracker) {
+    this.trackers.push(t);
+  }
+
+  removeTracker(t: Tracker) {
+    this.trackers = this.trackers.filter((it) => it != t);
+  }
+
   async play(anim: JAnimation) {
     return new Promise<void>((resolve) => {
       let startTime = 0;
@@ -1365,6 +1424,9 @@ export abstract class Scene {
           anim.step(dt, this.ctx);
           this.objects.forEach((obj) =>
             obj.updaters.forEach((upd) => upd(obj, playTime))
+          );
+          this.trackers.forEach((tr) =>
+            tr.updaters.forEach((upd) => upd(tr, playTime))
           );
           this.render();
           playTime += dt;

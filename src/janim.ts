@@ -782,7 +782,7 @@ export class Axes extends JObject {
       // TODO not sure about translation hack
       const rx = x * factor + this.translation[0];
       const ry = -y * factor + this.translation[1];
-      
+
       if (isNaN(rx) || isNaN(ry)) return;
       plottedGraph.addCurve([
         [rx, ry],
@@ -1337,13 +1337,16 @@ export abstract class Scene {
   abstract construct(): void;
 
   render() {
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+
+    this.ctx.save();
     if (this.selfCenter) {
       this.ctx.translate(this.ctx.canvas.width / 2, this.ctx.canvas.height / 2);
     }
 
-    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-
     this.objects.forEach((obj) => obj.wrapedRender(this.ctx));
+
+    this.ctx.restore();
   }
 }
 

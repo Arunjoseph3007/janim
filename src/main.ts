@@ -191,7 +191,8 @@ class MyScene extends Scene {
     }
     // Axes and plotting
     else if (1) {
-      const axes = jf.Axes({}).translate(550, 320);
+      this.selfCenter = true;
+      const axes = jf.Axes({});
       this.add(axes);
 
       const sq = axes.plot((x) => x * x).stroke("#23d997");

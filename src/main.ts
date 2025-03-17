@@ -169,9 +169,9 @@ class MyScene extends Scene {
       );
     }
     // Stroke
-    else if (0) {
+    else if (1) {
       const sq = jf
-        .Rectangle(600, 200)
+        .Rectangle(200, 200)
         .fill("transparent")
         .stroke("pink")
         .fill("#00ffff66")

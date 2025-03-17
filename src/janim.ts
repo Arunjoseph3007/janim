@@ -1171,13 +1171,19 @@ export class Sequence extends JAnimation {
     }
   }
 }
+enum GradientPattern {
+  Linear = "Linear",
+  Conic = "Conic",
+  Radial = "Radial",
+}
 export class Stroke extends JAnimation {
   obj: VObject;
   easing: EasingFunc = linear;
   bound: Bounds;
   fadeAmt = 0.05;
   color: RGBA;
-  constructor(obj: VObject) {
+  gradMode: GradientPattern;
+  constructor(obj: VObject, gradMode: GradientPattern) {
     super();
     this.obj = obj;
     if (this.obj._strokeStyle instanceof RGBA) {
@@ -1186,6 +1192,37 @@ export class Stroke extends JAnimation {
       throw new Error("Expected _strokeStyle to be RGBA");
     }
     this.bound = obj.getBounds();
+    this.gradMode = gradMode;
+  }
+
+  private giveMeMyGradient(ctx: CanvasRenderingContext2D): CanvasGradient {
+    switch (this.gradMode) {
+      case GradientPattern.Linear:
+        return ctx.createLinearGradient(
+          this.bound.left,
+          this.bound.top,
+          this.bound.right,
+          this.bound.bottom
+        );
+      case GradientPattern.Conic:
+        return ctx.createConicGradient(
+          0,
+          lerpNum(0.5, this.bound.left, this.bound.right),
+          lerpNum(0.5, this.bound.top, this.bound.bottom)
+        );
+      case GradientPattern.Radial:
+        return ctx.createRadialGradient(
+          lerpNum(0.5, this.bound.left, this.bound.right),
+          lerpNum(0.5, this.bound.top, this.bound.bottom),
+          0,
+          lerpNum(0.5, this.bound.left, this.bound.right),
+          lerpNum(0.5, this.bound.top, this.bound.bottom),
+          Math.max(
+            this.bound.right - this.bound.left,
+            this.bound.top - this.bound.bottom
+          )
+        );
+    }
   }
 
   step(dt: number, ctx: CanvasRenderingContext2D): void {
@@ -1194,13 +1231,7 @@ export class Stroke extends JAnimation {
     t = clamp(t);
     t = this.easing(t);
 
-    const grad = ctx.createLinearGradient(
-      this.bound.left,
-      this.bound.top,
-      this.bound.right,
-      this.bound.bottom
-    );
-
+    const grad = this.giveMeMyGradient(ctx);
     grad.addColorStop(clamp(t), this.color.toStyle());
     grad.addColorStop(clamp(t), this.color.toStyle());
     grad.addColorStop(clamp(t + this.fadeAmt), "transparent");
@@ -1214,12 +1245,12 @@ export class Stroke extends JAnimation {
 }
 export class Create extends Sequence {
   obj: VObject;
-  constructor(obj: VObject) {
+  constructor(obj: VObject, gradMode = GradientPattern.Linear) {
     super();
     this.obj = obj;
 
     this.add(
-      new Stroke(this.obj),
+      new Stroke(this.obj, gradMode),
       new ColorMorph(
         obj,
         TRANSPARENT,

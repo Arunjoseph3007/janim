@@ -62,6 +62,13 @@ export const translateGlyph = (
 
 export const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
 
+/**
+ * Uses quadratic formula to solve equation
+ * @param a coeffcient of x^2
+ * @param b coeffcient of x^1
+ * @param c coeffcient of x^0
+ * @returns
+ */
 export const solveQuadEQ = (
   a: number,
   b: number,
@@ -73,6 +80,13 @@ export const solveQuadEQ = (
   return [(-b + d) / (2 * a), (-b - d) / (2 * a)];
 };
 
+/**
+ * Calculates derivative of polynomials. 
+ * @note polynomial is in reverse order
+ * @formula y = a.x^n => dy/dx = a.n.x^(n-1)
+ * @param poly 
+ * @returns 
+ */
 export const differentiatePolynomial = (poly: number[]) => {
   const derivative: number[] = [];
   for (let i = 1; i < poly.length; i++) {
@@ -82,6 +96,13 @@ export const differentiatePolynomial = (poly: number[]) => {
   return derivative;
 };
 
+/**
+ * Evaluates polynomial at x 
+ * @note polynomial is in reverse order
+ * @param poly 
+ * @param x 
+ * @returns 
+ */
 const fAt = (poly: number[], x: number) => {
   let ans = 0;
   for (let i = 0; i < poly.length; i++) {
@@ -90,6 +111,14 @@ const fAt = (poly: number[], x: number) => {
   return ans;
 };
 
+/**
+ * Uses Netwon-Raphson method to solve polynomial equations
+ * @formula x0 = x0 - f(x0)/f'(x0)
+ * @param y 
+ * @param startPoint 
+ * @param precision 
+ * @returns 
+ */
 export const solvePolynomial = (
   y: number[],
   startPoint = 0.54321,

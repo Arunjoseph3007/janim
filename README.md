@@ -4,6 +4,4 @@ An attempt to understan how animation engines like [manim](https://github.com/3b
 
 ## Todo
 
-- [x] Grouping objects
-- [x] Color transforms
-- [ ] Custom easing functions
+- [ ] Binary Ops - (Union, Intersection, Difference, Exclusion)

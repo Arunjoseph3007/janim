@@ -87,7 +87,7 @@ export class RGBA {
   }
 }
 const WHITE = new RGBA(255, 255, 255);
-const TRANSPARENT = new RGBA(1, 1, 1, 0);
+const TRANSPARENT = new RGBA(0, 0, 0, 0);
 
 const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
   new RGBA(
@@ -169,6 +169,7 @@ export abstract class JObject {
   opacity = 1;
   updaters: JObjectUpdater[] = [];
 
+  // Updater funcs
   addUpdaters(...updaters: JObjectUpdater[]) {
     this.updaters.push(...updaters);
     return this;
@@ -178,13 +179,13 @@ export abstract class JObject {
     return this;
   }
 
+  // Fill
   set fillStyle(c: string) {
     this._fillStyle = colorToRGBA(c);
   }
   get fillStyle() {
     return this._fillStyle.toStyle();
   }
-
   fill(c: string) {
     this.fillStyle = c;
     return this;
@@ -193,6 +194,8 @@ export abstract class JObject {
     this._fillStyle.a = o;
     return this;
   }
+
+  // Stroke
   setStrokeOpacity(o: number) {
     if (this._strokeStyle instanceof RGBA) {
       this._strokeStyle.a = o;
@@ -203,7 +206,6 @@ export abstract class JObject {
     this.strokeStyle = c;
     return this;
   }
-
   set strokeStyle(c: string | CanvasGradient) {
     if (typeof c == "string") this._strokeStyle = colorToRGBA(c);
     else {
@@ -217,7 +219,12 @@ export abstract class JObject {
       return this._strokeStyle;
     }
   }
+  setStrokeWidth(w: number) {
+    this.strokeWidth = w;
+    return this;
+  }
 
+  // Translation
   translateX(x: number) {
     this.translation[0] += x;
     return this;
@@ -244,6 +251,8 @@ export abstract class JObject {
     this.setTranslateY(y);
     return this;
   }
+
+  // Scale
   scaleX(x: number) {
     this.scaling[0] *= x;
     return this;
@@ -270,6 +279,8 @@ export abstract class JObject {
     this.setScaleY(y);
     return this;
   }
+
+  // Rotation
   rotate(angle: number) {
     this.rotation += angle;
     return this;
@@ -287,11 +298,7 @@ export abstract class JObject {
     return this;
   }
 
-  setStrokeWidth(w: number) {
-    this.strokeWidth = w;
-    return this;
-  }
-
+  // Render
   wrapedRender(ctx: CanvasRenderingContext2D) {
     ctx.save();
     const originalAlpha = ctx.globalAlpha;
@@ -426,7 +433,6 @@ export class VObject extends JObject {
 
     if (DEBUG) {
       ctx.font = "34px monospace";
-      ctx.fillStyle = "white";
       this.glyphData.forEach((contour) => {
         contour.forEach(([c1, c2, c3, c], i) => {
           ctx.beginPath();
@@ -708,6 +714,8 @@ export class Axes extends JObject {
       range = [-10, 10];
     }
     this.options = { arrows, labels, range };
+    this.fill("white");
+    this.stroke("white");
   }
   render(ctx: CanvasRenderingContext2D): void {
     const w = ctx.canvas.width;
@@ -715,8 +723,6 @@ export class Axes extends JObject {
     const pad = 50;
     const arrowLen = 12;
 
-    ctx.fillStyle = "white";
-    ctx.strokeStyle = "white";
     ctx.font = "italic 25px Georgia";
 
     // X Axis
@@ -771,11 +777,13 @@ export class Axes extends JObject {
     const [start, end] = this.options.range;
 
     const factor = (16 * 70 - 2 * 50) / (end - start);
-    subdivide(start, end, 50).forEach((x) => {
+    subdivide(start, end, 100).forEach((x) => {
       const y = func(x);
       // TODO not sure about translation hack
       const rx = x * factor + this.translation[0];
       const ry = -y * factor + this.translation[1];
+      
+      if (isNaN(rx) || isNaN(ry)) return;
       plottedGraph.addCurve([
         [rx, ry],
         [rx, ry],
@@ -784,7 +792,7 @@ export class Axes extends JObject {
       ]);
     });
 
-    // plottedGraph.setStrokeWidth(3);
+    plottedGraph.setStrokeWidth(3);
     return plottedGraph;
   }
 }
@@ -1045,14 +1053,11 @@ export class ShapeMorph extends SimplePropertyAnim {
       while (srcContour.length < destContour.length) {
         const endPos = srcContour[srcContour.length - 1][3];
         srcContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
-        console.log(1);
       }
       while (destContour.length < srcContour.length) {
         const endPos = destContour[destContour.length - 1][3];
         destContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
-        console.log(2);
       }
-      console.log(3);
 
       console.assert(srcContour.length == destContour.length, "Fails");
     });
@@ -1077,8 +1082,27 @@ export class VMorph extends Parallel {
       new ShapeMorph(source, dest),
       new Translate(source, source.translation, dest.translation),
       new Spinner(source, source.rotation, dest.rotation),
-      new ColorMorph(source, source._fillStyle, dest._fillStyle)
+      new ColorMorph(
+        source,
+        source._fillStyle,
+        dest._fillStyle,
+        ColoringMode.FillOnly
+      )
     );
+
+    if (
+      source._strokeStyle instanceof RGBA &&
+      dest._strokeStyle instanceof RGBA
+    ) {
+      this.add(
+        new ColorMorph(
+          source,
+          source._strokeStyle,
+          dest._strokeStyle,
+          ColoringMode.StrokeOnly
+        )
+      );
+    }
   }
 }
 export class Sequence extends JAnimation {

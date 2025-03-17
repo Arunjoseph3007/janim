@@ -191,18 +191,20 @@ class MyScene extends Scene {
     }
     // Axes and plotting
     else if (1) {
-      const axes = jf.Axes({});
+      const axes = jf.Axes({}).translate(550, 320);
       this.add(axes);
 
-      const s = axes.plot(Math.sin).stroke("#44aa44").fill('red');
-      const t = axes.plot(Math.cos).stroke("white").fill('yellow');
+      const sq = axes.plot((x) => x * x).stroke("#23d997");
+      const s = axes.plot(Math.sin).stroke("teal");
+      const t = axes.plot(Math.log).stroke("red");
+      this.add(sq);
 
-      this.add(s);
+      await this.wait();
 
-      const vm = jf.VMorph(s, t);
-
-      this.ctx.translate(550, 320);
+      const vm = jf.VMorph(sq, s);
       await this.play(vm);
+      const vm2 = jf.VMorph(sq, t);
+      await this.play(vm2);
     }
   }
 }

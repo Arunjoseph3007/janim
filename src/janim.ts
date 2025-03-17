@@ -318,6 +318,15 @@ export abstract class JObject {
     ctx.globalAlpha = originalAlpha;
   }
 
+  get animate() {
+    return {
+      translate: (to: Vec2) => new Translate(this, null, to),
+      spin: (to: number) => new Spinner(this, 0, to),
+      fadeIn: () => new FadeIn(this),
+      color: (to: RGBA | string) => new ColorMorph(this, null, to),
+    };
+  }
+
   abstract render(ctx: CanvasRenderingContext2D): void;
 }
 export class VObject extends JObject {
@@ -407,6 +416,9 @@ export class VObject extends JObject {
       height: bottom - top,
       width: right - left,
     };
+  }
+  become(that: VObject) {
+    return new VMorph(this, that);
   }
   render(ctx: CanvasRenderingContext2D): void {
     ctx.beginPath();

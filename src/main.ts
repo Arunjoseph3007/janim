@@ -200,12 +200,20 @@ class MyScene extends Scene {
       const t = axes.plot(Math.log).stroke("red");
       this.add(sq);
 
-      await this.wait();
+      const cube = jf
+        .Rectangle(100, 100)
+        .translate(100, -100)
+        .fill("teal")
+        .stroke("yellow")
+        .setStrokeWidth(3);
+      this.add(cube);
+      await this.playAll(
+        cube.animate.fadeIn(),
+        cube.animate.spin(Math.PI / 4).ease(Easings.easeInOut)
+      );
 
-      const vm = jf.VMorph(sq, s);
-      await this.play(vm);
-      const vm2 = jf.VMorph(sq, t);
-      await this.play(vm2);
+      await this.play(sq.become(s));
+      await this.play(sq.become(t));
     }
   }
 }

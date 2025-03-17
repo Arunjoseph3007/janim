@@ -408,7 +408,7 @@ export class VObject extends JObject {
       ctx.moveTo(startPoint[0], startPoint[1]);
 
       contour.forEach((curve) => {
-        ctx.lineTo(curve[0][0], curve[0][1]);
+        // ctx.lineTo(curve[0][0], curve[0][1]);
         ctx.bezierCurveTo(
           curve[1][0],
           curve[1][1],
@@ -419,13 +419,14 @@ export class VObject extends JObject {
         );
       });
 
-      ctx.lineTo(startPoint[0], startPoint[1]);
+      // ctx.lineTo(startPoint[0], startPoint[1]);
     });
     ctx.stroke();
     ctx.fill();
 
     if (DEBUG) {
       ctx.font = "34px monospace";
+      ctx.fillStyle = "white";
       this.glyphData.forEach((contour) => {
         contour.forEach(([c1, c2, c3, c], i) => {
           ctx.beginPath();
@@ -770,7 +771,7 @@ export class Axes extends JObject {
     const [start, end] = this.options.range;
 
     const factor = (16 * 70 - 2 * 50) / (end - start);
-    subdivide(start, end, 100).forEach((x) => {
+    subdivide(start, end, 50).forEach((x) => {
       const y = func(x);
       // TODO not sure about translation hack
       const rx = x * factor + this.translation[0];
@@ -783,7 +784,7 @@ export class Axes extends JObject {
       ]);
     });
 
-    plottedGraph.setStrokeWidth(3);
+    // plottedGraph.setStrokeWidth(3);
     return plottedGraph;
   }
 }
@@ -1044,11 +1045,14 @@ export class ShapeMorph extends SimplePropertyAnim {
       while (srcContour.length < destContour.length) {
         const endPos = srcContour[srcContour.length - 1][3];
         srcContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+        console.log(1);
       }
       while (destContour.length < srcContour.length) {
         const endPos = destContour[destContour.length - 1][3];
         destContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+        console.log(2);
       }
+      console.log(3);
 
       console.assert(srcContour.length == destContour.length, "Fails");
     });
@@ -1172,7 +1176,7 @@ export class Create extends Sequence {
 
 export abstract class Scene {
   objects: JObject[] = [];
-  selfCenter = true;
+  selfCenter = false;
   runTimeMs = 0;
   done = false;
   ctx: CanvasRenderingContext2D;

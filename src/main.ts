@@ -194,15 +194,14 @@ class MyScene extends Scene {
       const axes = jf.Axes({});
       this.add(axes);
 
-      const s = axes.plot(Math.sin).stroke("#44aa44");
-      // const c = axes.plot(Math.cos).stroke("#aa4444");
-      const t = axes.plot(Math.cos).stroke("teal");
+      const s = axes.plot(Math.sin).stroke("#44aa44").fill('red');
+      const t = axes.plot(Math.cos).stroke("white").fill('yellow');
 
       this.add(s);
 
       const vm = jf.VMorph(s, t);
 
-      this.ctx.scale(0.1,0.1)
+      this.ctx.translate(550, 320);
       await this.play(vm);
     }
   }

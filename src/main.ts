@@ -1,4 +1,4 @@
-import { Easings, Scene, jf, loadFontFromUri } from "./janim";
+import { Easings, Image, Scene, jf, loadFontFromUri } from "./janim";
 import "./style.css";
 import { range } from "./utils";
 
@@ -190,7 +190,7 @@ class MyScene extends Scene {
       await this.playAll(st, ct);
     }
     // Axes and plotting
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       const axes = jf.Axes({});
       this.add(axes);
@@ -214,6 +214,22 @@ class MyScene extends Scene {
 
       await this.play(sq.become(s));
       await this.play(sq.become(t));
+    }
+    // Images
+    else if (1) {
+      this.selfCenter = true;
+      const uri =
+        "https://images.pexels.com/photos/674010/pexels-photo-674010.jpeg?cs=srgb&dl=pexels-anjana-c-169994-674010.jpg&fm=jpg";
+
+      const uri2 =
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtnvAOajH9gS4C30cRF7rD_voaTAKly2Ntaw&s";
+
+      const i1 = Image.fromURI(uri).rotateDeg(45);
+      const i2 = Image.fromURI(uri2).translate(100,100);
+
+      this.add(i1, i2);
+
+      await this.play(jf.Morph(i1, i2));
     }
   }
 }

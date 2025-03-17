@@ -24,10 +24,7 @@ import {
   solvePolynomial,
   subdivide,
 } from "./utils";
-
-const GoogleFonstJson = (await import("./googleFonts.json")) as {
-  default: Record<string, string>;
-};
+import GoogleFontsJson from "./googleFonts.json";
 
 export const todo = (): never => {
   throw new Error("TODO: not implmented yet");
@@ -35,6 +32,7 @@ export const todo = (): never => {
 
 const loadedFonts: Record<string, Font> = {};
 export const loadFont = (name: string, font: Font) => {
+  if (name in loadedFonts) return;
   loadedFonts[name] = font;
 };
 export const loadFontFromUri = async (name: string, uri: string) => {
@@ -46,7 +44,7 @@ export const loadFontFromUri = async (name: string, uri: string) => {
  * @returns
  */
 export const loadGoogleFont = async (family: string) => {
-  const uri = GoogleFonstJson.default[family];
+  const uri = (GoogleFontsJson as Record<string, string>)[family];
   if (!uri) throw new Error("Cant find font " + family);
 
   loadFontFromUri(family, `http://fonts.gstatic.com/s/${uri}.ttf`);
@@ -478,9 +476,10 @@ export class VObject extends JObject {
   }
 }
 /**
- * @deprecated I dont think this will be useful anymore
+ * To render text using native functions.
+ * If you want features like morphing use Text instead
  */
-export class _Text extends JObject {
+export class NativeText extends JObject {
   text: string;
   mode: ColoringMode;
   maxWidth?: number;
@@ -518,6 +517,29 @@ export class _Text extends JObject {
       ctx.fillText(this.text, 0, 0, this.maxWidth);
       ctx.strokeText(this.text, 0, 0, this.maxWidth);
     }
+  }
+}
+export class Image extends JObject {
+  image: CanvasImageSource;
+  h: number;
+  w: number;
+  constructor(image: CanvasImageSource, w = 200, h = 200) {
+    super();
+    this.image = image;
+    this.h = h;
+    this.w = w;
+  }
+
+  static fromURI(uri: string, w = 200, h = 200) {
+    const elm = document.createElement("img");
+    elm.src = uri;
+
+    return new Image(elm, w, h);
+  }
+
+  render(ctx: CanvasRenderingContext2D): void {
+    this.image;
+    ctx.drawImage(this.image, -this.w / 2, -this.h / 2, this.w, this.h);
   }
 }
 export class Circle extends VObject {
@@ -1365,6 +1387,9 @@ export abstract class Scene {
 type _CP<T extends abstract new (...args: any) => any> =
   ConstructorParameters<T>;
 
+/**
+ * Janim Factory - Incase you hate new keyword
+ */
 export const jf = {
   // Utils
   RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
@@ -1374,7 +1399,9 @@ export const jf = {
   Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
   Group: (...a: _CP<typeof Group>) => new Group(...a),
   VObject: (...a: _CP<typeof VObject>) => new VObject(...a),
+  NativeText: (...a: _CP<typeof NativeText>) => new NativeText(...a),
   Text: (...a: _CP<typeof Text>) => new Text(...a),
+  Image: (...a: _CP<typeof Image>) => new Image(...a),
   Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
   Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
   // Janims

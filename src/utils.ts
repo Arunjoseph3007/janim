@@ -81,11 +81,11 @@ export const solveQuadEQ = (
 };
 
 /**
- * Calculates derivative of polynomials. 
+ * Calculates derivative of polynomials.
  * @note polynomial is in reverse order
  * @formula y = a.x^n => dy/dx = a.n.x^(n-1)
- * @param poly 
- * @returns 
+ * @param poly
+ * @returns
  */
 export const differentiatePolynomial = (poly: number[]) => {
   const derivative: number[] = [];
@@ -97,11 +97,11 @@ export const differentiatePolynomial = (poly: number[]) => {
 };
 
 /**
- * Evaluates polynomial at x 
+ * Evaluates polynomial at x
  * @note polynomial is in reverse order
- * @param poly 
- * @param x 
- * @returns 
+ * @param poly
+ * @param x
+ * @returns
  */
 const fAt = (poly: number[], x: number) => {
   let ans = 0;
@@ -114,10 +114,10 @@ const fAt = (poly: number[], x: number) => {
 /**
  * Uses Netwon-Raphson method to solve polynomial equations
  * @formula x0 = x0 - f(x0)/f'(x0)
- * @param y 
- * @param startPoint 
- * @param precision 
- * @returns 
+ * @param y
+ * @param startPoint
+ * @param precision
+ * @returns
  */
 export const solvePolynomial = (
   y: number[],
@@ -143,4 +143,15 @@ export const isNthBitOn = (
   const wordNo = Math.floor(index / 8);
   const bitNo = index % 8;
   return ((word[wordNo] >> bitNo) & 1) == 1;
+};
+
+/**
+ * Gaussian distribution
+ * @param x
+ * @param y
+ * @returns
+ */
+export const gauss = (x: number, y: number) => {
+  const d2 = x ** 2 + y ** 2;
+  return Math.pow(Math.E, -d2 / 0.32);
 };

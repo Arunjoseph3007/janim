@@ -1,5 +1,7 @@
 export type Vec2 = [number, number];
 
+export type Vec3 = [number, number, number];
+
 export type CubicCurve = [Vec2, Vec2, Vec2, Vec2];
 
 export type Contour = CubicCurve[];

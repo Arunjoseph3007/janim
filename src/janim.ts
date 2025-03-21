@@ -505,6 +505,91 @@ export class VObject extends JObject {
     }
   }
 }
+function checkBoundIntersect(curveA: CubicCurve, curveB: CubicCurve) {
+  let topA = Infinity;
+  let leftA = Infinity;
+  let bottomA = -Infinity;
+  let rightA = -Infinity;
+
+  for (const p of curveA) {
+    leftA = Math.min(leftA, p[0]);
+    rightA = Math.max(rightA, p[0]);
+    topA = Math.min(topA, p[1]);
+    bottomA = Math.max(bottomA, p[1]);
+  }
+
+  let topB = Infinity;
+  let leftB = Infinity;
+  let bottomB = -Infinity;
+  let rightB = -Infinity;
+
+  for (const p of curveA) {
+    leftB = Math.min(leftB, p[0]);
+    rightB = Math.max(rightB, p[0]);
+    topB = Math.min(topB, p[1]);
+    bottomB = Math.max(bottomB, p[1]);
+  }
+
+  if (leftB > rightA || leftA > rightB || topA > bottomB || topB > bottomA)
+    return false;
+
+  return true;
+}
+const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
+  return [
+    (1 - t) * (1 - t) * (1 - t) * p[0][0] +
+      3 * (1 - t) * (1 - t) * t * p[1][0] +
+      3 * (1 - t) * t * t * p[2][0] +
+      t * t * t * p[3][0],
+    (1 - t) * (1 - t) * (1 - t) * p[0][1] +
+      3 * (1 - t) * (1 - t) * t * p[1][1] +
+      3 * (1 - t) * t * t * p[2][1] +
+      t * t * t * p[3][1],
+  ];
+};
+const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+
+/**
+ * Mind you must be very slow
+ * @param a Spline a
+ * @param b Spline b
+ * @returns
+ */
+const findIntersections = (a: Contour, b: Contour): Vec2[] => {
+  const intersections: Vec2[] = [];
+  for (let curveA of a) {
+    for (let curveB of b) {
+      if (!checkBoundIntersect(curveA, curveB)) continue;
+
+      const dt = 0.05;
+      for (let x = 0; x < 1; x += dt) {
+        const pa = cubicBezierAt(curveA, x);
+        for (let y = 0; y <= 1; y += dt) {
+          const pb = cubicBezierAt(curveB, y);
+          const d = dist(pa, pb);
+          if (d < 40) {
+            intersections.push(pa);
+            // If we break we will only detect utmost 1 intersection per pair
+            break;
+          }
+        }
+      }
+    }
+  }
+  return intersections;
+};
+export class Union extends VObject {
+  constructor(a: VObject, b: VObject) {
+    super();
+
+    const intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
+    if (intersections.length > 0) {
+      this.addContour(intersections.map((int) => [int, int, int, int]));
+    }
+
+    this.strokeStyle = "green";
+  }
+}
 /**
  * To render text using native functions.
  * If you want features like morphing use Text instead
@@ -1508,6 +1593,7 @@ export const jf = {
   Image: (...a: _CP<typeof Image>) => new Image(...a),
   Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
   Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
+  Union: (...a: _CP<typeof Union>) => new Union(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),

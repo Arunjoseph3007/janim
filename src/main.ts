@@ -190,7 +190,7 @@ class MyScene extends Scene {
       await this.playAll(st, ct);
     }
     // Axes and plotting
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       const axes = jf.Axes({});
       this.add(axes);
@@ -238,6 +238,14 @@ class MyScene extends Scene {
       this.add(c, s);
 
       await this.play(va);
+    }
+    // Binory Ops
+    else if (1) {
+      this.selfCenter = true;
+      const sq = jf.Circle(100); //.translate(-250, 200);
+      const ci = jf.Rectangle(300, 100); //.translate(-250, 200);
+
+      this.add(sq, ci, jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
     }
   }
 }

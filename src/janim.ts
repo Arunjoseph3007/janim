@@ -472,6 +472,7 @@ export class VObject extends JObject {
     ctx.fill();
 
     if (DEBUG) {
+      ctx.fillStyle = "#00888866";
       ctx.font = "34px monospace";
       this.glyphData.forEach((contour) => {
         contour.forEach(([c1, c2, c3, c], i) => {
@@ -523,7 +524,7 @@ function checkBoundIntersect(curveA: CubicCurve, curveB: CubicCurve) {
   let bottomB = -Infinity;
   let rightB = -Infinity;
 
-  for (const p of curveA) {
+  for (const p of curveB) {
     leftB = Math.min(leftB, p[0]);
     rightB = Math.max(rightB, p[0]);
     topB = Math.min(topB, p[1]);
@@ -550,42 +551,104 @@ const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
 const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
 /**
+ * @link https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html
+ * @param p Cubic Bezier Curve
+ * @param t where along the curve to split
+ * @returns
+ */
+export const splitBezier = (p: CubicCurve, t: number): [CubicCurve, CubicCurve] => {
+  const q1 = lerpVec2(t, p[0], p[1]);
+  const q2 = lerpVec2(t, p[1], p[2]);
+  const q3 = lerpVec2(t, p[2], p[3]);
+
+  const r1 = lerpVec2(t, q1, q2);
+  const r2 = lerpVec2(t, q2, q3);
+
+  const s = lerpVec2(t, r1, r2);
+  return [
+    [p[0], q1, r1, s],
+    [s, r2, q3, p[3]],
+  ];
+};
+/**
  * Mind you must be very slow
  * @param a Spline a
  * @param b Spline b
  * @returns
  */
-const findIntersections = (a: Contour, b: Contour): Vec2[] => {
-  const intersections: Vec2[] = [];
-  for (let curveA of a) {
-    for (let curveB of b) {
+type Intersection = {
+  p: Vec2;
+  ia: number;
+  ib: number;
+  t: number;
+};
+const findIntersections = (a: Contour, b: Contour): Intersection[] => {
+  const intersections: Intersection[] = [];
+  for (let ia = 0; ia < a.length; ia++) {
+    const curveA = a[ia];
+    for (let ib = 0; ib < b.length; ib++) {
+      const curveB = b[ib];
       if (!checkBoundIntersect(curveA, curveB)) continue;
 
-      const dt = 0.05;
+      const dt = 0.025;
       for (let x = 0; x < 1; x += dt) {
         const pa = cubicBezierAt(curveA, x);
         for (let y = 0; y <= 1; y += dt) {
           const pb = cubicBezierAt(curveB, y);
           const d = dist(pa, pb);
-          if (d < 40) {
-            intersections.push(pa);
+          if (d < 10) {
+            intersections.push({ p: pa, ia, ib, t: y });
             // If we break we will only detect utmost 1 intersection per pair
-            break;
+            // break;
           }
         }
       }
     }
   }
-  return intersections;
+  return intersections.sort((a, b) => a.t - b.t);
 };
 export class Union extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
-    const intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
-    if (intersections.length > 0) {
-      this.addContour(intersections.map((int) => [int, int, int, int]));
+    let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
+
+    console.table(intersections);
+
+    let ia = 0;
+    let ib = 0;
+    let isA = false;
+    // return
+    while (ia < a.glyphData[0].length && ib < b.glyphData[0].length) {
+      // debugger;
+
+      if (isA) {
+        this.addCurve(a.glyphData[0][ia]);
+
+        const int = intersections.find((int) => int.ia == ia);
+        if (int) {
+          isA = false;
+          ib = int.ib;
+          intersections = intersections.filter((intIt) => intIt != int);
+        } else {
+          ia++;
+        }
+      } else {
+        this.addCurve(b.glyphData[0][ib]);
+
+        const int = intersections.find((int) => int.ib == ib);
+        if (int) {
+          isA = true;
+          ia = int.ia;
+          intersections = intersections.filter((intIt) => intIt != int);
+        } else {
+          ib++;
+        }
+      }
     }
+    // if (intersections.length > 0) {
+    //   this.addContour(intersections.map(({ p }) => [p, p, p, p]));
+    // }
 
     this.strokeStyle = "green";
   }

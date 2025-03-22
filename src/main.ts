@@ -1,5 +1,13 @@
-import { Easings, Image, Scene, jf, loadFontFromUri } from "./janim";
+import {
+  Easings,
+  Image,
+  Scene,
+  jf,
+  loadFontFromUri,
+  splitBezier as splitCubicBezier,
+} from "./janim";
 import "./style.css";
+import { CubicCurve } from "./types";
 import { range } from "./utils";
 
 const FACTOR = 70;
@@ -242,10 +250,30 @@ class MyScene extends Scene {
     // Binory Ops
     else if (1) {
       this.selfCenter = true;
-      const sq = jf.Circle(100); //.translate(-250, 200);
-      const ci = jf.Rectangle(300, 100); //.translate(-250, 200);
+      // const ci = jf.Circle(200).stroke("#ffffff44");
+      // const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
 
-      this.add(sq, ci, jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
+      // this.add(sq, ci);
+      // this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
+      const curve = [
+        [-100, -100],
+        [-100, 100],
+        [100, 100],
+        [100, -100],
+      ] as CubicCurve;
+      const [a, b] = splitCubicBezier(curve, 0.4);
+
+      const v = jf.VObject().translateX(0);
+      v.addContour([curve]);
+      this.add(v);
+
+      const va = jf.VObject().stroke("red");
+      va.addContour([a]);
+
+      const vb = jf.VObject().stroke("blue");
+      vb.addContour([b]);
+
+      this.add(va, vb);
     }
   }
 }

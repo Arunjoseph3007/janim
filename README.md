@@ -5,3 +5,8 @@ An attempt to understan how animation engines like [manim](https://github.com/3b
 ## Todo
 
 - [ ] Binary Ops - (Union, Intersection, Difference, Exclusion)
+
+
+## Reference
+
+- [Bezier Subdivision](https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html)

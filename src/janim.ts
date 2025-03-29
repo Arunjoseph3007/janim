@@ -10,6 +10,11 @@ import {
   Contour,
   GlpyhData,
   Bounds,
+  GlpyhData3D,
+  Bounds3D,
+  Vec3,
+  CubicCurve3D,
+  Contour3D,
 } from "./types";
 import {
   lerpNum,
@@ -23,6 +28,7 @@ import {
   translateGlyph,
   solvePolynomial,
   subdivide,
+  midpoint3D,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 
@@ -506,6 +512,291 @@ export class VObject extends JObject {
     }
   }
 }
+const NEAR_CLIPPING = 1;
+export class VObject3D extends JObject {
+  glyphData: GlpyhData3D = [];
+  translation3d: Vec3 = [0, 0, 0];
+  // TODO
+  rotation3d: Vec3 = [0, 0, 0];
+  // TODO
+  scaling3d: Vec3 = [0, 0, 0];
+  constructor() {
+    super();
+  }
+  translate3d(x: number, y = 0, z = 0) {
+    this.translation3d = [x, y, z];
+    return this;
+  }
+  rotate3d(x: number, y = 0, z = 0) {
+    this.rotation3d = [x, y, z];
+    return this;
+  }
+  scale3d(x: number, y = 0, z = 0) {
+    this.scaling3d = [x, y, z];
+    return this;
+  }
+  lastContour() {
+    return this.glyphData[this.glyphData.length - 1];
+  }
+  pos(): Vec3 {
+    if (this.glyphData.length == 0) return [0, 0, 0];
+    const contour = this.lastContour();
+    return contour[contour.length - 1][3];
+  }
+  addCurve(curve: CubicCurve3D) {
+    if (this.glyphData.length == 0) this.glyphData.push([]);
+    this.glyphData[this.glyphData.length - 1].push(curve);
+    return this;
+  }
+  addCurves(...curves: CubicCurve3D[]) {
+    curves.forEach((p) => this.addCurve(p));
+    return this;
+  }
+  addContour(contour: Contour3D) {
+    this.glyphData.push(contour);
+  }
+  addDummyContour(len: number = 1) {
+    const pos = this.pos();
+    const newCountour: Contour3D = range(len).map(() => [
+      [...pos],
+      [...pos],
+      [...pos],
+      [...pos],
+    ]);
+    this.addContour(newCountour);
+  }
+  addDummyCurve() {
+    // Splatting just to make copy
+    const pos = this.pos();
+    this.addCurve([[...pos], [...pos], [...pos], [...pos]]);
+  }
+  lineTo(point: Vec3) {
+    const mid = midpoint3D(this.pos(), point);
+    this.addCurve([[...this.pos()], mid, mid, point]);
+    return this;
+  }
+  cubicTo(c1: Vec3, c2: Vec3, c: Vec3) {
+    this.addCurve([[...this.pos()], c1, c2, c]);
+    return this;
+  }
+  quadTo(control: Vec3, point: Vec3) {
+    this.addCurve([[...this.pos()], control, control, point]);
+    return this;
+  }
+  getBounds3D(): Bounds3D {
+    let top = Infinity;
+    let left = Infinity;
+    let bottom = -Infinity;
+    let right = -Infinity;
+    let front = Infinity;
+    let back = -Infinity;
+
+    for (const contour of this.glyphData) {
+      for (const curve of contour) {
+        if (curve[0][0] < left) left = curve[0][0];
+        if (curve[3][0] < left) left = curve[3][0];
+
+        if (curve[0][0] > right) right = curve[0][0];
+        if (curve[3][0] > right) right = curve[3][0];
+
+        if (curve[0][1] < top) top = curve[0][1];
+        if (curve[3][1] < top) top = curve[3][1];
+
+        if (curve[0][1] > bottom) bottom = curve[0][1];
+        if (curve[3][1] > bottom) bottom = curve[3][1];
+
+        if (curve[0][2] < front) front = curve[0][2];
+        if (curve[3][2] < front) front = curve[3][2];
+
+        if (curve[0][2] > back) back = curve[0][2];
+        if (curve[3][2] > back) back = curve[3][2];
+      }
+    }
+
+    return {
+      top,
+      left,
+      bottom,
+      right,
+      front,
+      back,
+      height: bottom - top,
+      width: right - left,
+      depth: back - front,
+    };
+  }
+  getBounds(): Bounds {
+    let top = Infinity;
+    let left = Infinity;
+    let bot = -Infinity;
+    let rigt = -Infinity;
+
+    const tz = this.translation3d[2];
+
+    for (const contour of this.glyphData) {
+      for (const curve of contour) {
+        const g = (a = 0, i = 0) => curve[a][i] / (curve[a][2] + tz);
+        if (g(0, 0) < left) left = g(0, 0);
+        if (g(3, 0) < left) left = g(3, 0);
+
+        if (g(0, 0) > rigt) rigt = g(0, 0);
+        if (g(3, 0) > rigt) rigt = g(3, 0);
+
+        if (g(0, 1) < top) top = g(0, 1);
+        if (g(3, 1) < top) top = g(3, 1);
+
+        if (g(0, 1) > bot) bot = g(0, 1);
+        if (g(3, 1) > bot) bot = g(3, 1);
+      }
+    }
+
+    return {
+      top,
+      left,
+      bottom: bot,
+      right: rigt,
+      height: bot - top,
+      width: rigt - left,
+    };
+  }
+  become(that: VObject) {
+    todo();
+  }
+  render(ctx: CanvasRenderingContext2D): void {
+    ctx.beginPath();
+    const [tx, ty, tz] = this.translation3d;
+    const translate = (v: Vec3): Vec3 => [v[0] + tx, v[1] + ty, v[2] + tz];
+    this.glyphData.forEach((contour) => {
+      const sp = translate(contour[0][0]);
+
+      ctx.moveTo(sp[0] / sp[2], sp[1] / sp[2]);
+
+      contour.forEach((curve) => {
+        const [_, p1, p2, p3] = curve.map(translate);
+        ctx.bezierCurveTo(
+          p1[0] / p1[2],
+          p1[1] / p1[2],
+          p2[0] / p2[2],
+          p2[1] / p2[2],
+          p3[0] / p3[2],
+          p3[1] / p3[2]
+        );
+      });
+
+      ctx.stroke();
+      ctx.fill();
+    });
+
+    if (DEBUG) {
+      ctx.fillStyle = "#00888866";
+      ctx.font = "34px monospace";
+      this.glyphData.forEach((contour) => {
+        contour.forEach((cc, i) => {
+          const [c1, c2, c3, c] = cc.map(translate);
+          ctx.beginPath();
+          ctx.arc(c1[0] / c1[2], c1[1] / c1[2], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
+
+          ctx.beginPath();
+          ctx.arc(c2[0] / c2[2], c2[1] / c2[2], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
+
+          ctx.beginPath();
+          ctx.arc(c3[0] / c3[2], c3[1] / c3[2], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
+
+          ctx.beginPath();
+          ctx.arc(c[0] / c[2], c[1] / c[2], 5, 0, 2 * PI);
+          ctx.stroke();
+          ctx.fill();
+          ctx.beginPath();
+
+          ctx.fillText(i.toString(), c[0] / c[2] - 20, c[1] / c[2] - 10);
+        });
+      });
+    }
+  }
+}
+export class Cube extends VObject3D {
+  w: number;
+  constructor(w = 2) {
+    super();
+    this.w = w;
+
+    const hw = w / 2;
+    const hz = -w / 2 + w / 500;
+
+    this.addCurve([
+      [-hw, -hw, -hw],
+      [-hw, -hw, -hw],
+      [-hw, -hw, -hw],
+      [-hw, -hw, -hw],
+    ]);
+    this.lineTo([hw, -hw, -hw]);
+    this.lineTo([hw, hw, -hw]);
+    this.lineTo([-hw, hw, -hw]);
+    this.lineTo([-hw, -hw, -hw]);
+
+    this.addDummyContour();
+    this.lineTo([-hw, -hw, hz]);
+    this.lineTo([hw, -hw, hz]);
+    this.lineTo([hw, -hw, -hw]);
+    this.lineTo([-hw, -hw, -hw]);
+
+    this.addDummyContour();
+    this.lineTo([-hw, -hw, hz]);
+    this.lineTo([-hw, hw, hz]);
+    this.lineTo([-hw, hw, -hw]);
+    this.lineTo([-hw, -hw, -hw]);
+
+    this.addContour([
+      [
+        [-hw, -hw, hz],
+        [-hw, -hw, hz],
+        [-hw, -hw, hz],
+        [-hw, -hw, hz],
+      ],
+    ]);
+    this.lineTo([hw, -hw, hz]);
+    this.lineTo([hw, hw, hz]);
+    this.lineTo([-hw, hw, hz]);
+    this.lineTo([-hw, -hw, hz]);
+
+    this.addContour([
+      [
+        [-hw, hw, -hw],
+        [-hw, hw, -hw],
+        [-hw, hw, -hw],
+        [-hw, hw, -hw],
+      ],
+    ]);
+    this.lineTo([-hw, hw, hz]);
+    this.lineTo([hw, hw, hz]);
+    this.lineTo([hw, hw, -hw]);
+    this.lineTo([-hw, hw, -hw]);
+
+    this.addContour([
+      [
+        [hw, -hw, -hw],
+        [hw, -hw, -hw],
+        [hw, -hw, -hw],
+        [hw, -hw, -hw],
+      ],
+    ]);
+    this.lineTo([hw, -hw, hz]);
+    this.lineTo([hw, hw, hz]);
+    this.lineTo([hw, hw, -hw]);
+    this.lineTo([hw, -hw, -hw]);
+
+    this.translate3d(0, 0, hw + 0.01);
+  }
+}
 function checkBoundIntersect(curveA: CubicCurve, curveB: CubicCurve) {
   let topA = Infinity;
   let leftA = Infinity;
@@ -556,7 +847,10 @@ const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
  * @param t where along the curve to split
  * @returns
  */
-export const splitBezier = (p: CubicCurve, t: number): [CubicCurve, CubicCurve] => {
+export const splitBezier = (
+  p: CubicCurve,
+  t: number
+): [CubicCurve, CubicCurve] => {
   const q1 = lerpVec2(t, p[0], p[1]);
   const q2 = lerpVec2(t, p[1], p[2]);
   const q3 = lerpVec2(t, p[2], p[3]);
@@ -607,6 +901,11 @@ const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   }
   return intersections.sort((a, b) => a.t - b.t);
 };
+/**
+ * WIP: still not usefull
+ * @experimental
+ * @ignore
+ */
 export class Union extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
@@ -620,8 +919,6 @@ export class Union extends VObject {
     let isA = false;
     // return
     while (ia < a.glyphData[0].length && ib < b.glyphData[0].length) {
-      // debugger;
-
       if (isA) {
         this.addCurve(a.glyphData[0][ia]);
 
@@ -763,7 +1060,6 @@ export class Rectangle extends VObject {
     const left = -this.w / 2;
     const r = this.rounding;
 
-    // TODO instead of arcing
     this.addCurve([
       [left + r, top],
       [left, top],
@@ -1380,13 +1676,13 @@ enum GradientPattern {
   Radial = "Radial",
 }
 export class Stroke extends JAnimation {
-  obj: VObject;
+  obj: VObject | VObject3D;
   easing: EasingFunc = linear;
   bound: Bounds;
   fadeAmt = 0.05;
   color: RGBA;
   gradMode: GradientPattern;
-  constructor(obj: VObject, gradMode: GradientPattern) {
+  constructor(obj: VObject | VObject3D, gradMode: GradientPattern) {
     super();
     this.obj = obj;
     if (this.obj._strokeStyle instanceof RGBA) {
@@ -1395,6 +1691,8 @@ export class Stroke extends JAnimation {
       throw new Error("Expected _strokeStyle to be RGBA");
     }
     this.bound = obj.getBounds();
+    console.log({ b: this.bound });
+
     this.gradMode = gradMode;
   }
 
@@ -1447,8 +1745,8 @@ export class Stroke extends JAnimation {
   }
 }
 export class Create extends Sequence {
-  obj: VObject;
-  constructor(obj: VObject, gradMode = GradientPattern.Linear) {
+  obj: VObject | VObject3D;
+  constructor(obj: VObject | VObject3D, gradMode = GradientPattern.Linear) {
     super();
     this.obj = obj;
 
@@ -1657,6 +1955,9 @@ export const jf = {
   Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
   Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
   Union: (...a: _CP<typeof Union>) => new Union(...a),
+  // 3D
+  VObject3D: (...a: _CP<typeof VObject3D>) => new VObject3D(...a),
+  Cube: (...a: _CP<typeof Cube>) => new Cube(...a),
   // Janims
   Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
   FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),

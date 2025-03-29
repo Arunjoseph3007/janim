@@ -1,4 +1,5 @@
 import {
+  Cube,
   Easings,
   Image,
   Scene,
@@ -248,7 +249,7 @@ class MyScene extends Scene {
       await this.play(va);
     }
     // Binory Ops
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       // const ci = jf.Circle(200).stroke("#ffffff44");
       // const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
@@ -274,6 +275,24 @@ class MyScene extends Scene {
       vb.addContour([b]);
 
       this.add(va, vb);
+    }
+    // 3D cube
+    else if (1) {
+      this.selfCenter = true;
+      const cu = jf.Cube().fill("#00888822");
+
+      cu.addUpdaters((u, t) => {
+        const tu = u as Cube;
+        const tt = t / 1000;
+        // tu.translation3d[0] = Math.sin(tt) * 2.5;
+        // tu.translation3d[1] = Math.cos(tt) * 2.5;
+      });
+
+      this.add(cu);
+
+      const cr = jf.Create(cu)
+      await this.play(cr)
+      this.wait(20000);
     }
   }
 }

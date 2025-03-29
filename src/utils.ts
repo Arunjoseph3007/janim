@@ -1,4 +1,4 @@
-import { Contour, CubicCurve, GlpyhData, TLerpFunc, Vec2 } from "./types";
+import { Contour, CubicCurve, GlpyhData, TLerpFunc, Vec2, Vec3 } from "./types";
 
 const { max, min, abs, sin, cos } = Math;
 
@@ -24,6 +24,11 @@ export const lerpNum: TLerpFunc<number> = (t, a, b) => a + (b - a) * t;
 export const lerpVec2: TLerpFunc<Vec2> = (t, a, b) => [
   lerpNum(t, a[0], b[0]),
   lerpNum(t, a[1], b[1]),
+];
+export const lerpVec3: TLerpFunc<Vec3> = (t, a, b) => [
+  lerpNum(t, a[0], b[0]),
+  lerpNum(t, a[1], b[1]),
+  lerpNum(t, a[2], b[2]),
 ];
 export const lerpCurve: TLerpFunc<CubicCurve> = (t, a, b) => [
   lerpVec2(t, a[0], b[0]),
@@ -61,6 +66,7 @@ export const translateGlyph = (
 };
 
 export const midpoint = (a: Vec2, b: Vec2) => lerpVec2(0.5, a, b);
+export const midpoint3D = (a: Vec3, b: Vec3) => lerpVec3(0.5, a, b);
 
 /**
  * Uses quadratic formula to solve equation

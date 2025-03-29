@@ -277,7 +277,7 @@ class MyScene extends Scene {
       this.add(va, vb);
     }
     // 3D cube
-    else if (1) {
+    else if (0) {
       this.selfCenter = true;
       const cu = jf.Cube().fill("#00888822");
       this.add(cu);
@@ -292,6 +292,26 @@ class MyScene extends Scene {
         // tu.translation3d[1] = Math.cos(tt) * 2.5;
       });
       await this.wait(20000);
+    }
+
+    // Write anim
+    else if (1) {
+      this.selfCenter = true;
+      const cu = jf.Cube().fill("#00888866");
+      this.add(cu);
+
+      const wr = jf.Write(cu);
+      await this.play(wr);
+
+      const tx = jf
+        .Text("Hi there", "Montserrat")
+        .setFontSize(10)
+        .translateY(-200)
+        .fill("pink");
+      this.add(tx);
+
+      const tw = jf.Write(tx);
+      await this.play(tw);
     }
   }
 }

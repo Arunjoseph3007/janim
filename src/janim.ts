@@ -29,6 +29,7 @@ import {
   solvePolynomial,
   subdivide,
   midpoint3D,
+  lerpVec3,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 
@@ -859,6 +860,23 @@ export const splitBezier = (
   const r2 = lerpVec2(t, q2, q3);
 
   const s = lerpVec2(t, r1, r2);
+  return [
+    [p[0], q1, r1, s],
+    [s, r2, q3, p[3]],
+  ];
+};
+export const splitBezier3D = (
+  p: CubicCurve3D,
+  t: number
+): [CubicCurve3D, CubicCurve3D] => {
+  const q1 = lerpVec3(t, p[0], p[1]);
+  const q2 = lerpVec3(t, p[1], p[2]);
+  const q3 = lerpVec3(t, p[2], p[3]);
+
+  const r1 = lerpVec3(t, q1, q2);
+  const r2 = lerpVec3(t, q2, q3);
+
+  const s = lerpVec3(t, r1, r2);
   return [
     [p[0], q1, r1, s],
     [s, r2, q3, p[3]],
@@ -1745,6 +1763,55 @@ export class Stroke extends JAnimation {
     }
   }
 }
+export class NicerStroke extends JAnimation {
+  obj: VObject | VObject3D;
+  initialGlyphData: GlpyhData | GlpyhData3D;
+  easing: EasingFunc = linear;
+  constructor(obj: VObject | VObject3D) {
+    super();
+    this.obj = obj;
+    this.initialGlyphData = structuredClone(obj.glyphData);
+  }
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
+    this.runTimeMs += dt;
+    let t = this.runTimeMs / this.durationMs;
+    t = clamp(t);
+    t = this.easing(t);
+
+    if (this.obj instanceof VObject3D) {
+      this.obj.glyphData = (this.initialGlyphData as GlpyhData3D).map(
+        (contour) => {
+          const numCurves = contour.length;
+          const numDrawn = Math.floor(numCurves * t);
+          const drawn = contour.slice(0, numDrawn);
+          if (numDrawn < contour.length) {
+            drawn.push(
+              splitBezier3D(contour[numDrawn], (t * numCurves) % 1)[0]
+            );
+          }
+          return drawn;
+        }
+      );
+    }
+    if (this.obj instanceof VObject) {
+      this.obj.glyphData = (this.initialGlyphData as GlpyhData).map(
+        (contour) => {
+          const numCurves = contour.length;
+          const numDrawn = Math.floor(numCurves * t);
+          const drawn = contour.slice(0, numDrawn);
+          if (numDrawn < contour.length) {
+            drawn.push(splitBezier(contour[numDrawn], (t * numCurves) % 1)[0]);
+          }
+          return drawn;
+        }
+      );
+    }
+
+    if (this.runTimeMs > this.durationMs) {
+      this.done = true;
+    }
+  }
+}
 export class Create extends Sequence {
   obj: VObject | VObject3D;
   constructor(obj: VObject | VObject3D, gradMode = GradientPattern.Linear) {
@@ -1753,6 +1820,25 @@ export class Create extends Sequence {
 
     this.add(
       new Stroke(this.obj, gradMode),
+      new ColorMorph(
+        obj,
+        TRANSPARENT,
+        this.obj._fillStyle,
+        ColoringMode.FillOnly
+      )
+    );
+
+    this.obj.fillStyle = "transparent";
+  }
+}
+export class Write extends Sequence {
+  obj: VObject | VObject3D;
+  constructor(obj: VObject | VObject3D) {
+    super();
+    this.obj = obj;
+
+    this.add(
+      new NicerStroke(this.obj),
       new ColorMorph(
         obj,
         TRANSPARENT,
@@ -1972,5 +2058,7 @@ export const jf = {
   ShapeMorph: (...a: _CP<typeof ShapeMorph>) => new ShapeMorph(...a),
   VMorph: (...a: _CP<typeof VMorph>) => new VMorph(...a),
   Stroke: (...a: _CP<typeof Stroke>) => new Stroke(...a),
+  NicerStroke: (...a: _CP<typeof NicerStroke>) => new NicerStroke(...a),
+  Write: (...a: _CP<typeof Write>) => new Write(...a),
   Create: (...a: _CP<typeof Create>) => new Create(...a),
 };

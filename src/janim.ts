@@ -3,7 +3,6 @@ const DEBUG = 0;
 import Font from "./font";
 import {
   Vec2,
-  TLerpFunc,
   CubicCurve,
   ColoringMode,
   EasingFunc,
@@ -29,14 +28,19 @@ import {
   solvePolynomial,
   subdivide,
   midpoint3D,
-  lerpVec3,
+  findIntersections,
+  splitBezier3D,
+  splitBezier,
+  todo,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
+import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
 
-export const todo = (): never => {
-  throw new Error("TODO: not implmented yet");
-};
+const { PI, tan } = Math;
 
+/*##########################################################
+######################  FONT STUFF  ########################
+############################################################*/
 const loadedFonts: Record<string, Font> = {};
 export const loadFont = (name: string, font: Font) => {
   if (name in loadedFonts) return;
@@ -57,51 +61,9 @@ export const loadGoogleFont = async (family: string) => {
   loadFontFromUri(family, `http://fonts.gstatic.com/s/${uri}.ttf`);
 };
 
-const { PI, tan } = Math;
-
-export class RGBA {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-
-  constructor(r: number, g: number, b: number, a: number = 1) {
-    this.r = r;
-    this.g = g;
-    this.b = b;
-    this.a = a;
-  }
-
-  static fromStr(str: string) {
-    const startIndex = str.indexOf("(") + 1;
-    const segments = str
-      .slice(startIndex, -1)
-      .split(",")
-      .map((s) => s.trim())
-      .map(Number);
-
-    // @ts-expect-error
-    return new RGBA(...segments);
-  }
-  toStyle() {
-    const { r, g, b, a } = this;
-    return `rgba(${r},${g},${b},${a})`;
-  }
-  toString() {
-    return this.toStyle();
-  }
-}
-const WHITE = new RGBA(255, 255, 255);
-const TRANSPARENT = new RGBA(0, 0, 0, 0);
-
-const lerpRgba: TLerpFunc<RGBA> = (t, a, b) =>
-  new RGBA(
-    lerpNum(t, a.r, b.r),
-    lerpNum(t, a.g, b.g),
-    lerpNum(t, a.b, b.b),
-    lerpNum(t, a.a, b.a)
-  );
-
+/*##########################################################
+#####################  EASING STUFF  #######################
+############################################################*/
 const linear: EasingFunc = (t) => t;
 const quadratic: (cp: Vec2) => EasingFunc = function (cp) {
   console.assert(
@@ -154,14 +116,9 @@ export const Easings = {
   easeInOut: cubic([0.42, 0], [0.58, 1]),
 };
 
-const __dummyElm = document.createElement("div");
-document.body.appendChild(__dummyElm);
-const colorToRGBA = (color: string) => {
-  __dummyElm.style.color = color;
-  const rgbstr = window.getComputedStyle(__dummyElm).color;
-  return RGBA.fromStr(rgbstr);
-};
-
+/*##########################################################
+#####################  JOBJECT STUFF  ######################
+############################################################*/
 type JObjectUpdater = (obj: JObject, t: number) => void;
 
 export abstract class JObject {
@@ -334,36 +291,6 @@ export abstract class JObject {
 
   abstract render(ctx: CanvasRenderingContext2D): void;
 }
-type TrackerUpdater = (obj: Tracker, t: number) => void;
-// TODO not finalized, may rework the design
-class Tracker {
-  value: number;
-  updaters: TrackerUpdater[] = [];
-
-  constructor(value: number) {
-    this.value = value;
-  }
-  // Updater funcs
-  addUpdaters(...updaters: TrackerUpdater[]) {
-    this.updaters.push(...updaters);
-    return this;
-  }
-  removeUpdater(updater: TrackerUpdater) {
-    this.updaters = this.updaters.filter((up) => up != updater);
-    return this;
-  }
-  getValue() {
-    return this.value;
-  }
-  setValue(v: number) {
-    this.value = v;
-  }
-  get animate() {
-    return {
-      set: (to: number) => new SetTrackerValue(this, null, to),
-    };
-  }
-}
 export class VObject extends JObject {
   glyphData: GlpyhData;
 
@@ -513,7 +440,6 @@ export class VObject extends JObject {
     }
   }
 }
-const NEAR_CLIPPING = 1;
 export class VObject3D extends JObject {
   glyphData: GlpyhData3D = [];
   translation3d: Vec3 = [0, 0, 0];
@@ -660,7 +586,7 @@ export class VObject3D extends JObject {
       width: rigt - left,
     };
   }
-  become(that: VObject) {
+  become(_that: VObject) {
     todo();
   }
   render(ctx: CanvasRenderingContext2D): void {
@@ -798,127 +724,6 @@ export class Cube extends VObject3D {
     this.translate3d(0, 0, hw + 0.01);
   }
 }
-function checkBoundIntersect(curveA: CubicCurve, curveB: CubicCurve) {
-  let topA = Infinity;
-  let leftA = Infinity;
-  let bottomA = -Infinity;
-  let rightA = -Infinity;
-
-  for (const p of curveA) {
-    leftA = Math.min(leftA, p[0]);
-    rightA = Math.max(rightA, p[0]);
-    topA = Math.min(topA, p[1]);
-    bottomA = Math.max(bottomA, p[1]);
-  }
-
-  let topB = Infinity;
-  let leftB = Infinity;
-  let bottomB = -Infinity;
-  let rightB = -Infinity;
-
-  for (const p of curveB) {
-    leftB = Math.min(leftB, p[0]);
-    rightB = Math.max(rightB, p[0]);
-    topB = Math.min(topB, p[1]);
-    bottomB = Math.max(bottomB, p[1]);
-  }
-
-  if (leftB > rightA || leftA > rightB || topA > bottomB || topB > bottomA)
-    return false;
-
-  return true;
-}
-const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
-  return [
-    (1 - t) * (1 - t) * (1 - t) * p[0][0] +
-      3 * (1 - t) * (1 - t) * t * p[1][0] +
-      3 * (1 - t) * t * t * p[2][0] +
-      t * t * t * p[3][0],
-    (1 - t) * (1 - t) * (1 - t) * p[0][1] +
-      3 * (1 - t) * (1 - t) * t * p[1][1] +
-      3 * (1 - t) * t * t * p[2][1] +
-      t * t * t * p[3][1],
-  ];
-};
-const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
-
-/**
- * @link https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html
- * @param p Cubic Bezier Curve
- * @param t where along the curve to split
- * @returns
- */
-export const splitBezier = (
-  p: CubicCurve,
-  t: number
-): [CubicCurve, CubicCurve] => {
-  const q1 = lerpVec2(t, p[0], p[1]);
-  const q2 = lerpVec2(t, p[1], p[2]);
-  const q3 = lerpVec2(t, p[2], p[3]);
-
-  const r1 = lerpVec2(t, q1, q2);
-  const r2 = lerpVec2(t, q2, q3);
-
-  const s = lerpVec2(t, r1, r2);
-  return [
-    [p[0], q1, r1, s],
-    [s, r2, q3, p[3]],
-  ];
-};
-export const splitBezier3D = (
-  p: CubicCurve3D,
-  t: number
-): [CubicCurve3D, CubicCurve3D] => {
-  const q1 = lerpVec3(t, p[0], p[1]);
-  const q2 = lerpVec3(t, p[1], p[2]);
-  const q3 = lerpVec3(t, p[2], p[3]);
-
-  const r1 = lerpVec3(t, q1, q2);
-  const r2 = lerpVec3(t, q2, q3);
-
-  const s = lerpVec3(t, r1, r2);
-  return [
-    [p[0], q1, r1, s],
-    [s, r2, q3, p[3]],
-  ];
-};
-/**
- * Mind you must be very slow
- * @param a Spline a
- * @param b Spline b
- * @returns
- */
-type Intersection = {
-  p: Vec2;
-  ia: number;
-  ib: number;
-  t: number;
-};
-const findIntersections = (a: Contour, b: Contour): Intersection[] => {
-  const intersections: Intersection[] = [];
-  for (let ia = 0; ia < a.length; ia++) {
-    const curveA = a[ia];
-    for (let ib = 0; ib < b.length; ib++) {
-      const curveB = b[ib];
-      if (!checkBoundIntersect(curveA, curveB)) continue;
-
-      const dt = 0.025;
-      for (let x = 0; x < 1; x += dt) {
-        const pa = cubicBezierAt(curveA, x);
-        for (let y = 0; y <= 1; y += dt) {
-          const pb = cubicBezierAt(curveB, y);
-          const d = dist(pa, pb);
-          if (d < 10) {
-            intersections.push({ p: pa, ia, ib, t: y });
-            // If we break we will only detect utmost 1 intersection per pair
-            // break;
-          }
-        }
-      }
-    }
-  }
-  return intersections.sort((a, b) => a.t - b.t);
-};
 /**
  * WIP: still not usefull
  * @experimental
@@ -1334,6 +1139,9 @@ export class Axes extends JObject {
   }
 }
 
+/*##########################################################
+###################  JANIMATION STUFF  #####################
+############################################################*/
 export abstract class JAnimation {
   background = false;
   durationMs = 3000;
@@ -1359,6 +1167,10 @@ export abstract class JAnimation {
     this.done = false;
   }
 }
+
+/*##########################################################
+###################  UTILITY ANIMATION  ####################
+############################################################*/
 export class Wait extends JAnimation {
   constructor(durationMs = 1000) {
     super();
@@ -1372,6 +1184,99 @@ export class Wait extends JAnimation {
     if (t > 1) this.done = true;
   }
 }
+export class Parallel extends JAnimation {
+  anims: JAnimation[] = [];
+
+  constructor(...anims: JAnimation[]) {
+    super();
+    this.anims = anims;
+    this.updateDurationMs();
+  }
+
+  private updateDurationMs() {
+    this.durationMs = this.anims
+      .map((anim) => anim.durationMs)
+      .reduce((p, r) => Math.max(p, r), 0);
+  }
+
+  add(...anims: JAnimation[]) {
+    this.anims.push(...anims);
+    this.updateDurationMs();
+  }
+
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
+    this.runTimeMs += dt;
+
+    this.anims.forEach((anim) => anim.step(dt, ctx));
+
+    if (this.anims.every((anim) => anim.done)) {
+      this.done = true;
+    }
+  }
+}
+export class Sequence extends JAnimation {
+  anims: JAnimation[] = [];
+
+  constructor(...anims: JAnimation[]) {
+    super();
+    this.anims = anims;
+    this.updateDurationMs();
+  }
+
+  private updateDurationMs() {
+    this.durationMs = this.anims.reduce(
+      (acc, anim) => acc + anim.durationMs,
+      0
+    );
+  }
+
+  add(...anims: JAnimation[]) {
+    this.anims.push(...anims);
+    this.updateDurationMs();
+  }
+
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
+    this.runTimeMs += dt;
+
+    const currAnim = this.anims.find((anim) => !anim.done);
+    currAnim?.step(dt, ctx);
+
+    if (this.anims.every((anim) => anim.done)) {
+      this.done = true;
+    }
+  }
+}
+export class Repeat extends JAnimation {
+  anim: JAnimation;
+  times: number;
+
+  constructor(anim: JAnimation, times: number) {
+    super();
+    this.anim = anim;
+    this.times = times;
+    this.durationMs = this.anim.durationMs * times;
+  }
+
+  step(dt: number, ctx: CanvasRenderingContext2D): void {
+    this.runTimeMs += dt;
+
+    const t = this.runTimeMs / this.durationMs;
+
+    this.anim.step(dt, ctx);
+
+    if (this.anim.done) {
+      if (t > 1) {
+        this.done = true;
+      } else {
+        this.anim.reset();
+      }
+    }
+  }
+}
+
+/*##########################################################
+###################  SIMPLE ANIMATION  #####################
+############################################################*/
 export abstract class SimplePropertyAnim extends JAnimation {
   easing: EasingFunc = linear;
   constructor() {
@@ -1398,20 +1303,6 @@ export abstract class SimplePropertyAnim extends JAnimation {
   }
 
   onFinish() {}
-}
-class SetTrackerValue extends SimplePropertyAnim {
-  tr: Tracker;
-  from: number;
-  to: number;
-  constructor(tr: Tracker, from: number | null, to: number) {
-    super();
-    this.tr = tr;
-    this.from = from ?? tr.getValue();
-    this.to = to;
-  }
-  protected updateProperty(t: number): void {
-    this.tr.setValue(lerpNum(t, this.from, this.to));
-  }
 }
 export class Translate extends SimplePropertyAnim {
   obj: JObject;
@@ -1503,85 +1394,9 @@ export class ColorMorph extends SimplePropertyAnim {
   }
 }
 
-export class Parallel extends JAnimation {
-  anims: JAnimation[] = [];
-
-  constructor(...anims: JAnimation[]) {
-    super();
-    this.anims = anims;
-    this.updateDurationMs();
-  }
-
-  private updateDurationMs() {
-    this.durationMs = this.anims
-      .map((anim) => anim.durationMs)
-      .reduce((p, r) => Math.max(p, r), 0);
-  }
-
-  add(...anims: JAnimation[]) {
-    this.anims.push(...anims);
-    this.updateDurationMs();
-  }
-
-  step(dt: number, ctx: CanvasRenderingContext2D): void {
-    this.runTimeMs += dt;
-
-    this.anims.forEach((anim) => anim.step(dt, ctx));
-
-    if (this.anims.every((anim) => anim.done)) {
-      this.done = true;
-    }
-  }
-}
-export class Repeat extends JAnimation {
-  anim: JAnimation;
-  times: number;
-
-  constructor(anim: JAnimation, times: number) {
-    super();
-    this.anim = anim;
-    this.times = times;
-    this.durationMs = this.anim.durationMs * times;
-  }
-
-  step(dt: number, ctx: CanvasRenderingContext2D): void {
-    this.runTimeMs += dt;
-
-    const t = this.runTimeMs / this.durationMs;
-
-    this.anim.step(dt, ctx);
-
-    if (this.anim.done) {
-      if (t > 1) {
-        this.done = true;
-      } else {
-        this.anim.reset();
-      }
-    }
-  }
-}
-export class Morph extends Parallel {
-  source: JObject;
-  dest: JObject;
-
-  constructor(source: JObject, dest: JObject) {
-    super();
-    this.source = source;
-    this.dest = dest;
-
-    this.add(
-      new Translate(source, source.translation, dest.translation),
-      new Spinner(source, source.rotation, dest.rotation),
-      new ColorMorph(source, source._fillStyle, dest._fillStyle),
-      new FadeIn(source, 1, 0),
-
-      new Translate(dest, source.translation, dest.translation),
-      new Spinner(dest, source.rotation, dest.rotation),
-      new ColorMorph(dest, source._fillStyle, dest._fillStyle),
-      new FadeIn(dest, 0, 1)
-    );
-  }
-}
+/*##########################################################
+###################  COMPLEX ANIMATION  ####################
+############################################################*/
 export class ShapeMorph extends SimplePropertyAnim {
   source: VObject;
   dest: VObject;
@@ -1620,6 +1435,28 @@ export class ShapeMorph extends SimplePropertyAnim {
     this.source.glyphData = lerpGlyph(t, this.from, this.dest.glyphData);
   }
 }
+export class Morph extends Parallel {
+  source: JObject;
+  dest: JObject;
+
+  constructor(source: JObject, dest: JObject) {
+    super();
+    this.source = source;
+    this.dest = dest;
+
+    this.add(
+      new Translate(source, source.translation, dest.translation),
+      new Spinner(source, source.rotation, dest.rotation),
+      new ColorMorph(source, source._fillStyle, dest._fillStyle),
+      new FadeIn(source, 1, 0),
+
+      new Translate(dest, source.translation, dest.translation),
+      new Spinner(dest, source.rotation, dest.rotation),
+      new ColorMorph(dest, source._fillStyle, dest._fillStyle),
+      new FadeIn(dest, 0, 1)
+    );
+  }
+}
 export class VMorph extends Parallel {
   source: VObject;
   dest: VObject;
@@ -1653,38 +1490,6 @@ export class VMorph extends Parallel {
           ColoringMode.StrokeOnly
         )
       );
-    }
-  }
-}
-export class Sequence extends JAnimation {
-  anims: JAnimation[] = [];
-
-  constructor(...anims: JAnimation[]) {
-    super();
-    this.anims = anims;
-    this.updateDurationMs();
-  }
-
-  private updateDurationMs() {
-    this.durationMs = this.anims.reduce(
-      (acc, anim) => acc + anim.durationMs,
-      0
-    );
-  }
-
-  add(...anims: JAnimation[]) {
-    this.anims.push(...anims);
-    this.updateDurationMs();
-  }
-
-  step(dt: number, ctx: CanvasRenderingContext2D): void {
-    this.runTimeMs += dt;
-
-    const currAnim = this.anims.find((anim) => !anim.done);
-    currAnim?.step(dt, ctx);
-
-    if (this.anims.every((anim) => anim.done)) {
-      this.done = true;
     }
   }
 }
@@ -1772,7 +1577,7 @@ export class NicerStroke extends JAnimation {
     this.obj = obj;
     this.initialGlyphData = structuredClone(obj.glyphData);
   }
-  step(dt: number, ctx: CanvasRenderingContext2D): void {
+  step(dt: number, _ctx: CanvasRenderingContext2D): void {
     this.runTimeMs += dt;
     let t = this.runTimeMs / this.durationMs;
     t = clamp(t);
@@ -1848,6 +1653,54 @@ export class Write extends Sequence {
     );
 
     this.obj.fillStyle = "transparent";
+  }
+}
+
+/*##########################################################
+#####################  TRACKER STUFF #######################
+############################################################*/
+type TrackerUpdater = (obj: Tracker, t: number) => void;
+// TODO not finalized, may rework the design
+class Tracker {
+  value: number;
+  updaters: TrackerUpdater[] = [];
+
+  constructor(value: number) {
+    this.value = value;
+  }
+  // Updater funcs
+  addUpdaters(...updaters: TrackerUpdater[]) {
+    this.updaters.push(...updaters);
+    return this;
+  }
+  removeUpdater(updater: TrackerUpdater) {
+    this.updaters = this.updaters.filter((up) => up != updater);
+    return this;
+  }
+  getValue() {
+    return this.value;
+  }
+  setValue(v: number) {
+    this.value = v;
+  }
+  get animate() {
+    return {
+      set: (to: number) => new SetTrackerValue(this, null, to),
+    };
+  }
+}
+class SetTrackerValue extends SimplePropertyAnim {
+  tr: Tracker;
+  from: number;
+  to: number;
+  constructor(tr: Tracker, from: number | null, to: number) {
+    super();
+    this.tr = tr;
+    this.from = from ?? tr.getValue();
+    this.to = to;
+  }
+  protected updateProperty(t: number): void {
+    this.tr.setValue(lerpNum(t, this.from, this.to));
   }
 }
 

@@ -1,6 +1,18 @@
-import { Contour, CubicCurve, GlpyhData, TLerpFunc, Vec2, Vec3 } from "./types";
+import {
+  Contour,
+  CubicCurve,
+  CubicCurve3D,
+  GlpyhData,
+  TLerpFunc,
+  Vec2,
+  Vec3,
+} from "./types";
 
 const { max, min, abs, sin, cos } = Math;
+
+export const todo = (): never => {
+  throw new Error("TODO: not implmented yet");
+};
 
 export const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
 
@@ -160,4 +172,126 @@ export const isNthBitOn = (
 export const gauss = (x: number, y: number) => {
   const d2 = x ** 2 + y ** 2;
   return Math.pow(Math.E, -d2 / 0.32);
+};
+
+export function checkBoundIntersect(curveA: CubicCurve, curveB: CubicCurve) {
+  let topA = Infinity;
+  let leftA = Infinity;
+  let bottomA = -Infinity;
+  let rightA = -Infinity;
+
+  for (const p of curveA) {
+    leftA = Math.min(leftA, p[0]);
+    rightA = Math.max(rightA, p[0]);
+    topA = Math.min(topA, p[1]);
+    bottomA = Math.max(bottomA, p[1]);
+  }
+
+  let topB = Infinity;
+  let leftB = Infinity;
+  let bottomB = -Infinity;
+  let rightB = -Infinity;
+
+  for (const p of curveB) {
+    leftB = Math.min(leftB, p[0]);
+    rightB = Math.max(rightB, p[0]);
+    topB = Math.min(topB, p[1]);
+    bottomB = Math.max(bottomB, p[1]);
+  }
+
+  if (leftB > rightA || leftA > rightB || topA > bottomB || topB > bottomA)
+    return false;
+
+  return true;
+}
+export const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
+  return [
+    (1 - t) * (1 - t) * (1 - t) * p[0][0] +
+      3 * (1 - t) * (1 - t) * t * p[1][0] +
+      3 * (1 - t) * t * t * p[2][0] +
+      t * t * t * p[3][0],
+    (1 - t) * (1 - t) * (1 - t) * p[0][1] +
+      3 * (1 - t) * (1 - t) * t * p[1][1] +
+      3 * (1 - t) * t * t * p[2][1] +
+      t * t * t * p[3][1],
+  ];
+};
+const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+
+/**
+ * @link https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html
+ * @param p Cubic Bezier Curve
+ * @param t where along the curve to split
+ * @returns
+ */
+export const splitBezier = (
+  p: CubicCurve,
+  t: number
+): [CubicCurve, CubicCurve] => {
+  const q1 = lerpVec2(t, p[0], p[1]);
+  const q2 = lerpVec2(t, p[1], p[2]);
+  const q3 = lerpVec2(t, p[2], p[3]);
+
+  const r1 = lerpVec2(t, q1, q2);
+  const r2 = lerpVec2(t, q2, q3);
+
+  const s = lerpVec2(t, r1, r2);
+  return [
+    [p[0], q1, r1, s],
+    [s, r2, q3, p[3]],
+  ];
+};
+export const splitBezier3D = (
+  p: CubicCurve3D,
+  t: number
+): [CubicCurve3D, CubicCurve3D] => {
+  const q1 = lerpVec3(t, p[0], p[1]);
+  const q2 = lerpVec3(t, p[1], p[2]);
+  const q3 = lerpVec3(t, p[2], p[3]);
+
+  const r1 = lerpVec3(t, q1, q2);
+  const r2 = lerpVec3(t, q2, q3);
+
+  const s = lerpVec3(t, r1, r2);
+  return [
+    [p[0], q1, r1, s],
+    [s, r2, q3, p[3]],
+  ];
+};
+/**
+ * Mind you must be very slow
+ * @param a Spline a
+ * @param b Spline b
+ * @returns
+ */
+type Intersection = {
+  p: Vec2;
+  ia: number;
+  ib: number;
+  t: number;
+};
+export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
+  const intersections: Intersection[] = [];
+  for (let ia = 0; ia < a.length; ia++) {
+    const curveA = a[ia];
+    for (let ib = 0; ib < b.length; ib++) {
+      const curveB = b[ib];
+      if (!checkBoundIntersect(curveA, curveB)) continue;
+
+      const dt = 0.025;
+      for (let x = 0; x < 1; x += dt) {
+        const pa = cubicBezierAt(curveA, x);
+        for (let y = 0; y <= 1; y += dt) {
+          const pb = cubicBezierAt(curveB, y);
+          const d = dist(pa, pb);
+          if (d < 10) {
+            intersections.push({ p: pa, ia, ib, t: y });
+            // If we break we will only detect utmost 1 intersection per pair
+            // break;
+          }
+        }
+      }
+    }
+  }
+  return intersections.sort((a, b) => a.t - b.t);
 };

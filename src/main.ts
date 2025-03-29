@@ -1,15 +1,7 @@
-import {
-  Cube,
-  Easings,
-  Image,
-  Scene,
-  jf,
-  loadFontFromUri,
-  splitBezier as splitCubicBezier,
-} from "./janim";
 import "./style.css";
+import { Cube, Easings, Image, Scene, jf, loadFontFromUri } from "./janim";
 import { CubicCurve } from "./types";
-import { range } from "./utils";
+import { range, splitBezier } from "./utils";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -262,7 +254,7 @@ class MyScene extends Scene {
         [100, 100],
         [100, -100],
       ] as CubicCurve;
-      const [a, b] = splitCubicBezier(curve, 0.4);
+      const [a, b] = splitBezier(curve, 0.4);
 
       const v = jf.VObject().translateX(0);
       v.addContour([curve]);

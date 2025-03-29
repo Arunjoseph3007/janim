@@ -280,19 +280,18 @@ class MyScene extends Scene {
     else if (1) {
       this.selfCenter = true;
       const cu = jf.Cube().fill("#00888822");
+      this.add(cu);
+
+      const cr = jf.Create(cu);
+      await this.play(cr);
 
       cu.addUpdaters((u, t) => {
         const tu = u as Cube;
         const tt = t / 1000;
-        // tu.translation3d[0] = Math.sin(tt) * 2.5;
+        tu.translation3d[0] = Math.sin(tt) * 2.5;
         // tu.translation3d[1] = Math.cos(tt) * 2.5;
       });
-
-      this.add(cu);
-
-      const cr = jf.Create(cu)
-      await this.play(cr)
-      this.wait(20000);
+      await this.wait(20000);
     }
   }
 }

@@ -1740,6 +1740,7 @@ export class Stroke extends JAnimation {
     this.obj._strokeStyle = grad;
 
     if (this.runTimeMs > this.durationMs) {
+      this.obj._strokeStyle = this.color;
       this.done = true;
     }
   }

@@ -48,7 +48,7 @@ export const loadFont = (name: string, font: Font) => {
 };
 export const loadLocalFont = async (name: string) => {
   // Hack for working with different basePath in GH Pages
-  loadFont(name, await Font.fromURI(`${window.location.pathname}/${name}.ttf`));
+  loadFont(name, await Font.fromURI(`${window.location.origin}/${name}.ttf`));
 };
 export const loadFontFromUri = async (name: string, uri: string) => {
   loadFont(name, await Font.fromURI(uri));
@@ -1721,6 +1721,7 @@ export abstract class Scene {
   private mouse: Vec2 = [0, 0];
   private loc: Vec2;
   private trackers: Tracker[] = [];
+  private aborted = false;
 
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -1778,6 +1779,10 @@ export abstract class Scene {
     this.running = !this.running;
   }
 
+  abort() {
+    this.aborted = true;
+  }
+
   add(...objs: JObject[]) {
     objs.forEach((obj) => {
       this.remove(obj);
@@ -1809,6 +1814,7 @@ export abstract class Scene {
     this.trackers = this.trackers.filter((it) => it != t);
   }
 
+  // TODO: maybe we can return exit codes. 0 for normal exit, 1 for abortion
   async play(anim: JAnimation) {
     return new Promise<void>((resolve) => {
       let startTime = 0;
@@ -1817,6 +1823,10 @@ export abstract class Scene {
       let prevT = 0;
 
       const loop: FrameRequestCallback = (t) => {
+        if (this.aborted) {
+          resolve();
+          return;
+        }
         // When recording have a steady FPS
         dt = this.isRecording ? 1000 / 60 : t - prevT;
         prevT = t;

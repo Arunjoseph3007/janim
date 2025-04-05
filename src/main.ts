@@ -334,6 +334,8 @@ async function main() {
       sc.startRecording();
     } else if (e.key == "s") {
       sc.stopRecording();
+    } else if (e.key == "q") {
+      sc.abort();
     }
   });
 

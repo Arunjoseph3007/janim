@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build-gh": "tsc && vite build --base='/janim'",
+    "preview-gh": "vite preview --base='/janim'"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

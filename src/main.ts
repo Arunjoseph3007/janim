@@ -1,5 +1,5 @@
 import "./style.css";
-import { Cube, Easings, Image, Scene, jf, loadFontFromUri } from "./janim";
+import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
 import { CubicCurve } from "./types";
 import { range, splitBezier } from "./utils";
 
@@ -322,8 +322,8 @@ async function main() {
   }
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
-  await loadFontFromUri("Montserrat", "Montserrat-Regular.ttf");
-  await loadFontFromUri("JetBrainsMono", "JetBrainsMono.ttf");
+  await loadLocalFont("Montserrat");
+  await loadLocalFont("JetBrainsMono");
 
   const sc = new MyScene(ctx);
 

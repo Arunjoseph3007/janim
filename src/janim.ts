@@ -46,6 +46,10 @@ export const loadFont = (name: string, font: Font) => {
   if (name in loadedFonts) return;
   loadedFonts[name] = font;
 };
+export const loadLocalFont = async (name: string) => {
+  // Hack for working with different basePath in GH Pages
+  loadFont(name, await Font.fromURI(`${window.location.pathname}/${name}.ttf`));
+};
 export const loadFontFromUri = async (name: string, uri: string) => {
   loadFont(name, await Font.fromURI(uri));
 };

@@ -249,30 +249,12 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    // const ci = jf.Circle(200).stroke("#ffffff44");
-    // const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
+    const ci = jf.Circle(200).stroke("#ffffff44");
+    const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
 
-    // this.add(sq, ci);
-    // this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
-    const curve = [
-      [-100, -100],
-      [-100, 100],
-      [100, 100],
-      [100, -100],
-    ] as CubicCurve;
-    const [a, b] = splitBezier(curve, 0.4);
-
-    const v = jf.VObject().translateX(0);
-    v.addContour([curve]);
-    this.add(v);
-
-    const va = jf.VObject().stroke("red");
-    va.addContour([a]);
-
-    const vb = jf.VObject().stroke("blue");
-    vb.addContour([b]);
-
-    this.add(va, vb);
+    this.add(sq);
+    this.add(ci);
+    this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
   }
 }
 class ThreeDCube extends Scene {
@@ -344,7 +326,7 @@ async function main() {
     console.log("2d context not supported");
     return;
   }
-  let sc: Scene | null = new QWriteAnim(ctx);
+  let sc: Scene | null = new BinaryOpsWIP(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {

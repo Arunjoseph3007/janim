@@ -32,6 +32,7 @@ import {
   splitBezier3D,
   splitBezier,
   todo,
+  chopAtIntersections,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -743,42 +744,16 @@ export class Union extends VObject {
 
     let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
-    console.table(intersections);
+    const choppedA = chopAtIntersections(
+      a.glyphData[0],
+      intersections.map((i) => ({ index: i.ia, t: i.tx }))
+    );
+    const choppedB = chopAtIntersections(
+      b.glyphData[0],
+      intersections.map((i) => ({ index: i.ib, t: i.ty }))
+    );
 
-    let ia = 0;
-    let ib = 0;
-    let isA = false;
-    // return
-    while (ia < a.glyphData[0].length && ib < b.glyphData[0].length) {
-      if (isA) {
-        this.addCurve(a.glyphData[0][ia]);
-
-        const int = intersections.find((int) => int.ia == ia);
-        if (int) {
-          isA = false;
-          ib = int.ib;
-          intersections = intersections.filter((intIt) => intIt != int);
-        } else {
-          ia++;
-        }
-      } else {
-        this.addCurve(b.glyphData[0][ib]);
-
-        const int = intersections.find((int) => int.ib == ib);
-        if (int) {
-          isA = true;
-          ia = int.ia;
-          intersections = intersections.filter((intIt) => intIt != int);
-        } else {
-          ib++;
-        }
-      }
-    }
-    // if (intersections.length > 0) {
-    //   this.addContour(intersections.map(({ p }) => [p, p, p, p]));
-    // }
-
-    this.strokeStyle = "green";
+    this.addContour(choppedA);
   }
 }
 /**

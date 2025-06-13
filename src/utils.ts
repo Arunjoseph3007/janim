@@ -268,7 +268,8 @@ type Intersection = {
   p: Vec2;
   ia: number;
   ib: number;
-  t: number;
+  tx: number;
+  ty: number;
 };
 export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   const intersections: Intersection[] = [];
@@ -285,7 +286,7 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
           const pb = cubicBezierAt(curveB, y);
           const d = dist(pa, pb);
           if (d < 10) {
-            intersections.push({ p: pa, ia, ib, t: y });
+            intersections.push({ p: pa, ia, ib, ty: y, tx: x });
             // If we break we will only detect utmost 1 intersection per pair
             // break;
           }
@@ -293,5 +294,38 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
       }
     }
   }
-  return intersections.sort((a, b) => a.t - b.t);
+  return intersections;
+};
+
+export type ChopPoint = {
+  index: number;
+  t: number;
+};
+export const chopAtIntersections = (
+  contour: Contour,
+  chopPoints: ChopPoint[]
+): Contour => {
+  const chopped: Contour = [];
+
+  contour.forEach((curve, i) => {
+    const curveChopPoints = chopPoints
+      .filter((cp) => cp.index == i)
+      .sort((a, b) => a.t - b.t);
+
+    if (curveChopPoints.length == 0) {
+      chopped.push(curve);
+      return;
+    }
+
+    curveChopPoints.forEach((ccp, i) => {
+      const [subCurveA, subCurveB] = splitBezier(curve, ccp.t);
+
+      if (i == 0) {
+        chopped.push(subCurveA);
+      }
+      chopped.push(subCurveB);
+    });
+  });
+
+  return chopped;
 };

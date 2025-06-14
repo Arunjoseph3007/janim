@@ -1,7 +1,6 @@
 import "./style.css";
 import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
-import { CubicCurve } from "./types";
-import { range, splitBezier } from "./utils";
+import { range } from "./utils";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -252,8 +251,8 @@ class BinaryOpsWIP extends Scene {
     const ci = jf.Circle(200).stroke("#ffffff44");
     const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
 
-    this.add(sq);
-    this.add(ci);
+    // this.add(sq);
+    // this.add(ci);
     this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
   }
 }

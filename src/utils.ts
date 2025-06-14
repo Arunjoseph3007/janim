@@ -258,12 +258,6 @@ export const splitBezier3D = (
     [s, r2, q3, p[3]],
   ];
 };
-/**
- * Mind you must be very slow
- * @param a Spline a
- * @param b Spline b
- * @returns
- */
 type Intersection = {
   p: Vec2;
   ia: number;
@@ -271,6 +265,12 @@ type Intersection = {
   tx: number;
   ty: number;
 };
+/**
+ * Mind you must be very slow
+ * @param a Spline a
+ * @param b Spline b
+ * @returns
+ */
 export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   const intersections: Intersection[] = [];
   for (let ia = 0; ia < a.length; ia++) {
@@ -287,8 +287,8 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
           const d = dist(pa, pb);
           if (d < 10) {
             intersections.push({ p: pa, ia, ib, ty: y, tx: x });
-            // If we break we will only detect utmost 1 intersection per pair
-            // break;
+            // TODO: we should have some logic here to not double detect single intersection
+            // maybe be incrementing x/y slightly 
           }
         }
       }
@@ -304,8 +304,9 @@ export type ChopPoint = {
 export const chopAtIntersections = (
   contour: Contour,
   chopPoints: ChopPoint[]
-): Contour => {
+): [Contour, ChopPoint[]] => {
   const chopped: Contour = [];
+  const newChopPoints: ChopPoint[] = [];
 
   contour.forEach((curve, i) => {
     const curveChopPoints = chopPoints
@@ -319,13 +320,15 @@ export const chopAtIntersections = (
 
     curveChopPoints.forEach((ccp, i) => {
       const [subCurveA, subCurveB] = splitBezier(curve, ccp.t);
+      const newT = i == 0 ? ccp.t : ccp.t - curveChopPoints[i - 1].t;
 
       if (i == 0) {
         chopped.push(subCurveA);
       }
+      newChopPoints.push({ index: chopped.length, t: newT });
       chopped.push(subCurveB);
     });
   });
 
-  return chopped;
+  return [chopped, newChopPoints];
 };

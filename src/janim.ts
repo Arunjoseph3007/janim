@@ -1,4 +1,4 @@
-const DEBUG = 0;
+const DEBUG = 1;
 
 import Font from "./font";
 import {
@@ -744,16 +744,27 @@ export class Union extends VObject {
 
     let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
-    const choppedA = chopAtIntersections(
+    const [choppedA, aChopPoints] = chopAtIntersections(
       a.glyphData[0],
       intersections.map((i) => ({ index: i.ia, t: i.tx }))
     );
-    const choppedB = chopAtIntersections(
+    const [choppedB, bChopPoints] = chopAtIntersections(
       b.glyphData[0],
       intersections.map((i) => ({ index: i.ib, t: i.ty }))
     );
 
+    for (let i = 0; i < intersections.length; i++) {
+      const int = intersections[i];
+
+      int.ia = aChopPoints[i].index;
+      int.tx = aChopPoints[i].t;
+
+      int.ib = bChopPoints[i].index;
+      int.ty = bChopPoints[i].t;
+    }
+
     this.addContour(choppedA);
+    this.addContour(choppedB);
   }
 }
 /**

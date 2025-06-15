@@ -264,8 +264,8 @@ class BinaryOpsWIP extends Scene {
     this.add(un);
 
     await this.playAll(
-      jf.FadeIn(ci, 1, 0),
-      jf.FadeIn(sq, 1, 0),
+      ci.animate.fadeOut(),
+      sq.animate.fadeOut(),
       un.animate.fadeIn()
     );
   }

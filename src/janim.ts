@@ -295,6 +295,7 @@ export abstract class JObject {
       translate: (to: Vec2) => new Translate(this, null, to),
       spin: (to: number) => new Spinner(this, 0, to),
       fadeIn: () => new FadeIn(this),
+      fadeOut: () => new FadeIn(this, 1, 0),
       color: (to: RGBA | string) => new ColorMorph(this, null, to),
     };
   }

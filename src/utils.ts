@@ -285,7 +285,7 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
         for (let y = 0; y <= 1; y += dt) {
           const pb = cubicBezierAt(curveB, y);
           const d = dist(pa, pb);
-          if (d < 10) {
+          if (d < 30) {
             intersections.push({ p: pa, ia, ib, ty: y, tx: x });
             // TODO: we should have some logic here to not double detect single intersection
             // maybe be incrementing x/y slightly
@@ -299,7 +299,7 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
 
 /**
  * Extract a cubic bezier segment between given t values
- * This implmentation is slightly inaccurate 
+ * @link https://www.sciencedirect.com/topics/mathematics/bezier-curve (Section 5.5.4.2)
  * @param a Bezier curve to chop
  * @param t1
  * @param t2
@@ -310,8 +310,8 @@ export const subBezier = (
   t1: number,
   t2: number
 ): CubicCurve => {
-  const [_a, subA] = splitBezier(a, t1);
-  const [subB, _b] = splitBezier(subA, t2);
+  const [subA, _a] = splitBezier(a, t2);
+  const [_b, subB] = splitBezier(subA, t1 / t2);
 
   return subB;
 };

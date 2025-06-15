@@ -755,6 +755,12 @@ export class Union extends VObject {
     // Segmentation logic. Common for all BinaryOps
     let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
+    if (intersections.length == 0) {
+      a.glyphData.forEach((c) => this.addContour(c));
+      b.glyphData.forEach((c) => this.addContour(c));
+      return;
+    }
+
     const [choppedA, aIndexMap] = chopAtIntersections(
       a.glyphData[0],
       intersections.map((int, i) => ({

@@ -261,7 +261,6 @@ class BinaryOpsWIP extends Scene {
     );
 
     const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3);
-    // .setStrokeOpacity(0);
     this.add(un);
 
     await this.playAll(
@@ -281,8 +280,8 @@ class SubBezier extends Scene {
       [250, -250],
     ];
 
-    const t1 = 0.1;
-    const t2 = 0.2;
+    const t1 = 0.5;
+    const t2 = 0.9;
 
     const vobj = jf.VObject();
     vobj.addContour([curve]);
@@ -291,15 +290,7 @@ class SubBezier extends Scene {
     const svobj = jf.VObject().stroke("red");
     svobj.addContour([subC]);
 
-    const [subA, _a] = splitBezier(curve, t1);
-    const savobj = jf.VObject().stroke("green");
-    savobj.addContour([subA]);
-
-    const [_b, subB] = splitBezier(curve, t2);
-    const sbvobj = jf.VObject().stroke("blue");
-    sbvobj.addContour([subB]);
-
-    this.add(vobj, svobj, savobj, sbvobj);
+    this.add(vobj, svobj);
   }
 }
 class ThreeDCube extends Scene {

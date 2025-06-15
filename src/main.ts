@@ -374,11 +374,6 @@ async function main() {
     sceneSelect.appendChild(optionElm);
   }
 
-  const menuBtn = document.querySelector<HTMLButtonElement>("#menu-togler")!;
-  menuBtn.addEventListener("click", () => {
-    sceneSelect.classList.toggle("hide");
-  });
-
   await loadLocalFont("Montserrat");
   await loadLocalFont("JetBrainsMono");
 

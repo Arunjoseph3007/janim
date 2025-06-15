@@ -249,12 +249,26 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    const ci = jf.Circle(200).stroke("#ffffff44");
-    const sq = jf.Rectangle(600, 200).stroke("#ffffff44");
+    const ci = jf.Circle(200).stroke("#ffffff44").translateX(-300);
+    const sq = jf.Rectangle(600, 200).stroke("#ffffff44").translateX(300);
 
-    // this.add(sq);
-    // this.add(ci);
-    this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
+    this.add(sq);
+    this.add(ci);
+
+    await this.playAll(
+      ci.animate.translate([0, 0]),
+      sq.animate.translate([0, 0])
+    );
+
+    const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3);
+    // .setStrokeOpacity(0);
+    this.add(un);
+
+    await this.playAll(
+      jf.FadeIn(ci, 1, 0),
+      jf.FadeIn(sq, 1, 0),
+      un.animate.fadeIn()
+    );
   }
 }
 class SubBezier extends Scene {

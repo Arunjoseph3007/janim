@@ -1,6 +1,7 @@
 import "./style.css";
 import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
-import { range } from "./utils";
+import { range, splitBezier, subBezier } from "./utils";
+import { CubicCurve } from "./types";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -256,6 +257,37 @@ class BinaryOpsWIP extends Scene {
     this.add(jf.Union(sq, ci).stroke("green").setStrokeWidth(3));
   }
 }
+class SubBezier extends Scene {
+  async construct() {
+    this.selfCenter = true;
+    const curve: CubicCurve = [
+      [-250, -250],
+      [-250, 250],
+      [250, 250],
+      [250, -250],
+    ];
+
+    const t1 = 0.1;
+    const t2 = 0.2;
+
+    const vobj = jf.VObject();
+    vobj.addContour([curve]);
+
+    const subC = subBezier(curve, t1, t2);
+    const svobj = jf.VObject().stroke("red");
+    svobj.addContour([subC]);
+
+    const [subA, _a] = splitBezier(curve, t1);
+    const savobj = jf.VObject().stroke("green");
+    savobj.addContour([subA]);
+
+    const [_b, subB] = splitBezier(curve, t2);
+    const sbvobj = jf.VObject().stroke("blue");
+    sbvobj.addContour([subB]);
+
+    this.add(vobj, svobj, savobj, sbvobj);
+  }
+}
 class ThreeDCube extends Scene {
   async construct() {
     this.selfCenter = true;
@@ -308,6 +340,7 @@ const SceneMap: Record<string, typeof Scene> = {
   Images,
   Tracker,
   BinaryOpsWIP,
+  SubBezier,
   ThreeDCube,
   QWriteAnim,
 };
@@ -340,6 +373,11 @@ async function main() {
     });
     sceneSelect.appendChild(optionElm);
   }
+
+  const menuBtn = document.querySelector<HTMLButtonElement>("#menu-togler")!;
+  menuBtn.addEventListener("click", () => {
+    sceneSelect.classList.toggle("hide");
+  });
 
   await loadLocalFont("Montserrat");
   await loadLocalFont("JetBrainsMono");

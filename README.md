@@ -5,6 +5,7 @@ An attempt to understan how animation engines like [manim](https://github.com/3b
 ## Todo
 
 - [ ] Binary Ops - (Union, Intersection, Difference, Exclusion)
+- [ ] Common Winding - figure out a mechanism such that all contours wll have the same winding
 
 
 ## Reference

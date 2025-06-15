@@ -288,7 +288,7 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
           if (d < 10) {
             intersections.push({ p: pa, ia, ib, ty: y, tx: x });
             // TODO: we should have some logic here to not double detect single intersection
-            // maybe be incrementing x/y slightly 
+            // maybe be incrementing x/y slightly
           }
         }
       }
@@ -297,20 +297,40 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   return intersections;
 };
 
+/**
+ * Extract a cubic bezier segment between given t values
+ * This implmentation is slightly inaccurate 
+ * @param a Bezier curve to chop
+ * @param t1
+ * @param t2
+ * @returns Bezier curve
+ */
+export const subBezier = (
+  a: CubicCurve,
+  t1: number,
+  t2: number
+): CubicCurve => {
+  const [_a, subA] = splitBezier(a, t1);
+  const [subB, _b] = splitBezier(subA, t2);
+
+  return subB;
+};
+
 export type ChopPoint = {
   index: number;
+  curveIndex: number;
   t: number;
 };
 export const chopAtIntersections = (
   contour: Contour,
   chopPoints: ChopPoint[]
-): [Contour, ChopPoint[]] => {
+): [Contour, Record<number, number>] => {
   const chopped: Contour = [];
-  const newChopPoints: ChopPoint[] = [];
+  const indexMap: Record<number, number> = {};
 
   contour.forEach((curve, i) => {
     const curveChopPoints = chopPoints
-      .filter((cp) => cp.index == i)
+      .filter((cp) => cp.curveIndex == i)
       .sort((a, b) => a.t - b.t);
 
     if (curveChopPoints.length == 0) {
@@ -318,17 +338,19 @@ export const chopAtIntersections = (
       return;
     }
 
-    curveChopPoints.forEach((ccp, i) => {
-      const [subCurveA, subCurveB] = splitBezier(curve, ccp.t);
-      const newT = i == 0 ? ccp.t : ccp.t - curveChopPoints[i - 1].t;
+    let startT = 0;
+    curveChopPoints.forEach((ccp) => {
+      const subCurve = subBezier(curve, startT, ccp.t);
+      startT = ccp.t;
 
-      if (i == 0) {
-        chopped.push(subCurveA);
-      }
-      newChopPoints.push({ index: chopped.length, t: newT });
-      chopped.push(subCurveB);
+      chopped.push(subCurve);
+
+      indexMap[ccp.index] = chopped.length;
     });
+
+    const lastCurve = subBezier(curve, startT, 1);
+    chopped.push(lastCurve);
   });
 
-  return [chopped, newChopPoints];
+  return [chopped, indexMap];
 };

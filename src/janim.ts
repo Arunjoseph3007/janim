@@ -1,4 +1,4 @@
-const DEBUG = 1;
+const DEBUG = 0;
 
 import Font from "./font";
 import {
@@ -93,14 +93,15 @@ const quadratic: (cp: Vec2) => EasingFunc = function (cp) {
   };
 };
 const cubic: (p1: Vec2, p2: Vec2) => EasingFunc = function (p1, p2) {
-  console.assert(
-    p1[0] >= 0 && p1[0] <= 1 && p1[1] >= 0 && p1[1] <= 1,
-    "Control points must be withing 0-1 range"
-  );
-  console.assert(
-    p2[0] >= 0 && p2[0] <= 1 && p2[1] >= 0 && p2[1] <= 1,
-    "Control points must be withing 0-1 range"
-  );
+  [p1, p2]
+    .flat()
+    .forEach((v) =>
+      console.assert(
+        v >= 0 && v <= 1,
+        "Control points must be withing 0-1 range"
+      )
+    );
+
   return function (x) {
     const a = 3 * p1[0] - 3 * p2[0] + 1;
     const b = 3 * p2[0] - 6 * p1[0];
@@ -309,6 +310,15 @@ export class VObject extends JObject {
     this._strokeStyle = WHITE;
     this._fillStyle = TRANSPARENT;
   }
+  /**
+   * Insome scenarios we need to reverse the winding of contours
+   */
+  reverseWinding() {
+    this.glyphData.forEach((contour) => {
+      contour.reverse();
+      contour.forEach((curve) => curve.reverse());
+    });
+  }
   lastContour() {
     return this.glyphData[this.glyphData.length - 1];
   }
@@ -416,7 +426,7 @@ export class VObject extends JObject {
 
     if (DEBUG) {
       ctx.fillStyle = "#00888866";
-      ctx.font = "34px monospace";
+      ctx.font = "24px monospace";
       this.glyphData.forEach((contour) => {
         contour.forEach(([c1, c2, c3, c], i) => {
           ctx.beginPath();
@@ -742,29 +752,73 @@ export class Union extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
+    // Segmentation logic. Common for all BinaryOps
     let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
-    const [choppedA, aChopPoints] = chopAtIntersections(
+    const [choppedA, aIndexMap] = chopAtIntersections(
       a.glyphData[0],
-      intersections.map((i) => ({ index: i.ia, t: i.tx }))
+      intersections.map((int, i) => ({
+        curveIndex: int.ia,
+        t: int.tx,
+        index: i,
+      }))
     );
-    const [choppedB, bChopPoints] = chopAtIntersections(
+    const [choppedB, bIndexMap] = chopAtIntersections(
       b.glyphData[0],
-      intersections.map((i) => ({ index: i.ib, t: i.ty }))
+      intersections.map((int, i) => ({
+        curveIndex: int.ib,
+        t: int.ty,
+        index: i,
+      }))
     );
 
     for (let i = 0; i < intersections.length; i++) {
       const int = intersections[i];
 
-      int.ia = aChopPoints[i].index;
-      int.tx = aChopPoints[i].t;
-
-      int.ib = bChopPoints[i].index;
-      int.ty = bChopPoints[i].t;
+      int.ia = aIndexMap[i];
+      int.ib = bIndexMap[i];
     }
 
-    this.addContour(choppedA);
-    this.addContour(choppedB);
+    // Segment combination logic. Different for all BinaryOps
+
+    const unionContour: Contour = [];
+
+    let ia = intersections[0].ia;
+    let ib = intersections[0].ib;
+    let isA = false;
+
+    while (true) {
+      if (isA) {
+        unionContour.push(choppedA[ia]);
+
+        ia = (ia + 1) % choppedA.length;
+
+        const intIdx = intersections.findIndex((int) => int.ia == ia);
+        if (intIdx == 0) {
+          break;
+        }
+        if (intIdx != -1) {
+          isA = !isA;
+          ib = intersections[intIdx].ib;
+        }
+      } else {
+        unionContour.push(choppedB[ib]);
+
+        ib = (ib + 1) % choppedB.length;
+
+        const intIdx = intersections.findIndex((int) => int.ib == ib);
+        if (intIdx == 0) {
+          break;
+        }
+
+        if (intIdx != -1) {
+          isA = !isA;
+          ia = intersections[intIdx].ia;
+        }
+      }
+    }
+
+    this.addContour(unionContour);
   }
 }
 /**
@@ -870,6 +924,9 @@ export class Rectangle extends VObject {
     this.rounding = 20;
 
     this.computeSpline();
+
+    // TODO: remove this. we are doing this just to have same winding for each shape
+    this.reverseWinding();
   }
 
   private computeSpline() {
@@ -1508,7 +1565,6 @@ export class Stroke extends JAnimation {
       throw new Error("Expected _strokeStyle to be RGBA");
     }
     this.bound = obj.getBounds();
-    console.log({ b: this.bound });
 
     this.gradMode = gradMode;
   }

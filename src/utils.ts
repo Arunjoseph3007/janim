@@ -62,6 +62,11 @@ export const lerpGlyph: TLerpFunc<GlpyhData> = (t, a, b) => {
   return range(a.length).map((i) => lerpContour(t, a[i], b[i]));
 };
 
+export const vec2Add = (...vecs: Vec2[]): Vec2 =>
+  vecs.reduce((acc, cur) => [acc[0] + cur[0], acc[1] + cur[1]], [0, 0]);
+
+export const vec2Neg = (vec: Vec2): Vec2 => [-vec[0], -vec[1]];
+
 export const translateGlyph = (
   glyphData: GlpyhData,
   offsetX: number,
@@ -146,9 +151,14 @@ export const solvePolynomial = (
 
   let root = startPoint;
   let fAtRoot = fAt(y, root);
-  while (abs(fAtRoot) > precision) {
+
+  let iterations = 0;
+  const MAX_ITERATIONS = 30;
+  while (abs(fAtRoot) > precision || iterations < MAX_ITERATIONS) {
     root = root - fAtRoot / fAt(dy, root);
     fAtRoot = fAt(y, root);
+
+    iterations++;
   }
 
   return root;
@@ -353,4 +363,56 @@ export const chopAtIntersections = (
   });
 
   return [chopped, indexMap];
+};
+
+/**
+ * Returns Y coordinate for a given X Cooradinate for a point on a cubic bezier curve.
+ * Currently it calculates x by first solving bezier equation in x space to find t
+ * and then using this t values and substituting in bezier equation to find y
+ *
+ * An alternate approach could be to Binary search between 0 - 1
+ * We can calculate x and y values for somes t's and subdivide [0,1] range
+ * until x is very close to given x and return corresponding y
+ * This might be more performant
+ * @param curve
+ * @param x
+ * @returns
+ */
+export const xToYCubicCurve = (curve: CubicCurve, x: number): number | null => {
+  const [p0, p1, p2, p3] = curve.map((p) => p[0]);
+  const [q0, q1, q2, q3] = curve.map((p) => p[1]);
+
+  const ax = -p0 + 3 * p1 - 3 * p2 + p3;
+  const bx = 3 * p0 - 6 * p1 + 3 * p2;
+  const cx = -3 * p0 + 3 * p1;
+  const dx = p0 - x;
+
+  const t = solvePolynomial([dx, cx, bx, ax], 0.5, 0.00001);
+
+  if (t < 0 || t > 1) return null;
+
+  const ay = -q0 + 3 * q1 - 3 * q2 + q3;
+  const by = 3 * q0 - 6 * q1 + 3 * q2;
+  const cy = -3 * q0 + 3 * q1;
+  const dy = q0;
+
+  return fAt([dy, cy, by, ay], t);
+};
+
+/**
+ * Returns if a point p is inside spline contour
+ * @todo
+ * @param p
+ * @param contour
+ * @returns
+ */
+export const isInsideContour = (p: Vec2, contour: Contour): boolean => {
+  const curvesAbove = contour
+    .map((c) => xToYCubicCurve(c, p[0])) // Get y for given x
+    .filter((y) => y != null) // filter curves that dont ailgn
+    .filter((y) => y > p[1]); // filter curves that are below
+
+  console.log(curvesAbove);
+
+  return curvesAbove.length % 2 == 1;
 };

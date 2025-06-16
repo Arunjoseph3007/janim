@@ -33,6 +33,8 @@ import {
   splitBezier,
   todo,
   chopAtIntersections,
+  isInsideContour,
+  cubicBezierAt,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -792,7 +794,9 @@ export class Union extends VObject {
 
     let ia = intersections[0].ia;
     let ib = intersections[0].ib;
-    let isA = false;
+
+    const testPoint = cubicBezierAt(choppedB[ib], 0.1);
+    let isA = isInsideContour(testPoint, a.glyphData[0]);
 
     while (true) {
       if (isA) {

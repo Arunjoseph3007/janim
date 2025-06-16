@@ -1,6 +1,6 @@
 import "./style.css";
 import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
-import { range, splitBezier, subBezier } from "./utils";
+import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
 
 const FACTOR = 70;
@@ -331,6 +331,27 @@ class QWriteAnim extends Scene {
     await this.play(tw);
   }
 }
+class InsideDetection extends Scene {
+  construct(): void {
+    const c = jf.Circle(200).translate(200, 100);
+    const r = jf.Rectangle(200, 300).translate(400, 300);
+    const t = jf.Text("C", "Montserrat").translate(500, 300).setFontSize(50);
+
+    [c, r, t].forEach((obj, j) => {
+      let i = 0;
+      obj.addUpdaters(() => {
+        i++;
+        if (i % (80 * (j + 1)) != 0) return;
+        const pos = vec2Add(this.getMouse(), vec2Neg(obj.translation));
+        const inside = isInsideContour(pos, obj.glyphData[0]);
+        obj.fill(inside ? "green" : "red");
+      });
+    });
+
+    this.add(c, r, t);
+    this.wait(10000000);
+  }
+}
 const SceneMap: Record<string, typeof Scene> = {
   SingleAlphabet,
   AllAlphabets,
@@ -348,6 +369,7 @@ const SceneMap: Record<string, typeof Scene> = {
   SubBezier,
   ThreeDCube,
   QWriteAnim,
+  InsideDetection,
 };
 
 async function main() {
@@ -363,7 +385,7 @@ async function main() {
     console.log("2d context not supported");
     return;
   }
-  let sc: Scene | null = new BinaryOpsWIP(ctx);
+  let sc: Scene | null = new SubBezier(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {

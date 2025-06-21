@@ -262,7 +262,7 @@ class BinaryOpsWIP extends Scene {
     //   sq.animate.translate([0, 0])
     // );
 
-    const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3);
+    const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3).fill('#00ffff22');
     this.add(un);
 
     // await this.playAll(

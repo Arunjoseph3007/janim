@@ -847,8 +847,8 @@ export class Union extends VObject {
 
     const unionContour: Contour = [];
 
-    let ia = this.intersections[0].ia;
-    let ib = this.intersections[0].ib;
+    let ia = this.intersections[startPoint].ia;
+    let ib = this.intersections[startPoint].ib;
 
     const testPoint = cubicBezierAt(choppedB[ib], 0.1);
     let isA = isInsideContour(testPoint, choppedA);
@@ -860,7 +860,7 @@ export class Union extends VObject {
         ia = (ia + 1) % choppedA.length;
 
         const intIdx = this.intersections.findIndex((int) => int.ia == ia);
-        if (intIdx == 0) {
+        if (intIdx == startPoint) {
           break;
         }
         if (intIdx != -1) {
@@ -874,7 +874,7 @@ export class Union extends VObject {
         ib = (ib + 1) % choppedB.length;
 
         const intIdx = this.intersections.findIndex((int) => int.ib == ib);
-        if (intIdx == 0) {
+        if (intIdx == startPoint) {
           break;
         }
 

@@ -229,7 +229,7 @@ export const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
       t * t * t * p[3][1],
   ];
 };
-const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+export const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
 /**
  * @link https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html

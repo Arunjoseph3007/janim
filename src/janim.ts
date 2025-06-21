@@ -794,13 +794,6 @@ export class Union extends VObject {
     // Segmentation logic. Common for all BinaryOps
     this.intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
-    // const s = this.intersections[0].p;
-    // this.addCurve([s, s, s, s]);
-    // this.intersections.forEach((i) => this.lineTo(i.p));
-    // console.log(structuredClone(this.intersections));
-    // return
-
-
     if (this.intersections.length == 0) {
       a.glyphData.forEach((c) => this.addContour(c));
       b.glyphData.forEach((c) => this.addContour(c));
@@ -830,17 +823,15 @@ export class Union extends VObject {
       int.ia = aIndexMap[i];
       int.ib = bIndexMap[i];
     }
-    console.log(this.intersections);
 
     // Segment combination logic. Different for all BinaryOps
-    this.intersectionVisited = new Array<number>(
-      this.intersections.length
-    ).fill(0);
+    this.intersectionVisited = new Array(this.intersections.length).fill(0);
     while (this.intersectionVisited.some((i) => i == 0)) {
+      const startPoint = this.intersectionVisited.findIndex((i) => i == 0);
       const newContour = this.extractUnionContour(
         choppedA,
         choppedB,
-        this.intersectionVisited.findIndex((i) => i == 0)
+        startPoint
       );
       this.addContour(newContour);
     }

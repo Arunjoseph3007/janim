@@ -1,4 +1,5 @@
 import {
+  Bounds,
   ChopPoint,
   Contour,
   CubicCurve,
@@ -271,35 +272,78 @@ export const splitBezier3D = (
   ];
 };
 
+export const getCurveBounds = (curve: CubicCurve): Bounds => {
+  let top = Infinity;
+  let left = Infinity;
+  let bottom = -Infinity;
+  let right = -Infinity;
+
+  curve.forEach(([x, y]) => {
+    left = min(left, x);
+    right = max(right, x);
+    top = min(top, y);
+    bottom = max(bottom, y);
+  });
+
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    width: right - left,
+    height: top - bottom,
+  };
+};
+
+type CurveIntersection = {
+  tx: number;
+  ty: number;
+  p: Vec2;
+};
+export const findCurveIntersections = (
+  a: CubicCurve,
+  b: CubicCurve,
+  ta1 = 0,
+  ta2 = 1,
+  tb1 = 0,
+  tb2 = 1
+): CurveIntersection[] => {
+  const ca = subBezier(a, ta1, ta2);
+  const cb = subBezier(b, tb1, tb2);
+  if (!checkBoundIntersect(ca, cb)) return [];
+
+  const MIN_GAP = 0.001;
+  const mida = (ta1 + ta2) / 2;
+  const midb = (tb1 + tb2) / 2;
+  if (abs(ta2 - ta1) < MIN_GAP && abs(tb2 - tb1) < MIN_GAP) {
+    return [{ tx: mida, ty: midb, p: cubicBezierAt(ca, mida) }];
+  }
+
+  return [
+    findCurveIntersections(a, b, ta1, mida, tb1, midb),
+    findCurveIntersections(a, b, mida, ta2, tb1, midb),
+    findCurveIntersections(a, b, ta1, mida, midb, tb2),
+    findCurveIntersections(a, b, mida, ta2, midb, tb2),
+  ].flat();
+};
+
 /**
- * Mind you must be very slow
+ * Mind you must be very fast
  * @param a Spline a
  * @param b Spline b
  * @returns
  */
 export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   const intersections: Intersection[] = [];
-  for (let ia = 0; ia < a.length; ia++) {
-    const curveA = a[ia];
-    for (let ib = 0; ib < b.length; ib++) {
-      const curveB = b[ib];
-      if (!checkBoundIntersect(curveA, curveB)) continue;
 
-      const dt = 0.025;
-      for (let x = 0; x < 1; x += dt) {
-        const pa = cubicBezierAt(curveA, x);
-        for (let y = 0; y <= 1; y += dt) {
-          const pb = cubicBezierAt(curveB, y);
-          const d = dist(pa, pb);
-          if (d < 30) {
-            intersections.push({ p: pa, ia, ib, ty: y, tx: x });
-            // TODO: we should have some logic here to not double detect single intersection
-            // maybe be incrementing x/y slightly
-          }
-        }
-      }
-    }
-  }
+  a.forEach((curveA, ia) => {
+    b.forEach((curveB, ib) => {
+      findCurveIntersections(curveA, curveB).forEach((int) => {
+        intersections.push({ ia, ib, ...int });
+      });
+    });
+  });
+
   return intersections;
 };
 

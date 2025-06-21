@@ -249,10 +249,10 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    // const ci = jf.Circle(200).stroke("#ffffff44").translateX(80);
-    // const sq = jf.Rectangle(200, 600).stroke("#ffffff44");
-    const ci = jf.Letter('C',"Montserrat").setFontSize(45).stroke("#ffffff44").translate(-180,100);
-    const sq = jf.Rectangle(100, 600).stroke("#ffffff44");
+    const ci = jf.Circle(200).stroke("#ffffff44").translateX(80);
+    const sq = jf.Rectangle(200, 600).stroke("#ffffff44");
+    // const ci = jf.Letter('C',"Montserrat").setFontSize(45).stroke("#ffffff44").translate(-180,100);
+    // const sq = jf.Rectangle(100, 600).stroke("#ffffff44");
 
     this.add(sq);
     this.add(ci);

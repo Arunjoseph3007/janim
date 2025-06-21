@@ -1,4 +1,4 @@
-const DEBUG = 1;
+const DEBUG = 0;
 
 import Font from "./font";
 import {
@@ -794,11 +794,11 @@ export class Union extends VObject {
     // Segmentation logic. Common for all BinaryOps
     this.intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
 
-    const s = this.intersections[0].p;
-    this.addCurve([s, s, s, s]);
-    this.intersections.forEach((i) => this.lineTo(i.p));
-    console.log(structuredClone(this.intersections));
-    return
+    // const s = this.intersections[0].p;
+    // this.addCurve([s, s, s, s]);
+    // this.intersections.forEach((i) => this.lineTo(i.p));
+    // console.log(structuredClone(this.intersections));
+    // return
 
 
     if (this.intersections.length == 0) {

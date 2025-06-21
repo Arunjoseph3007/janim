@@ -1,8 +1,10 @@
 import {
+  ChopPoint,
   Contour,
   CubicCurve,
   CubicCurve3D,
   GlpyhData,
+  Intersection,
   TLerpFunc,
   Vec2,
   Vec3,
@@ -268,13 +270,7 @@ export const splitBezier3D = (
     [s, r2, q3, p[3]],
   ];
 };
-type Intersection = {
-  p: Vec2;
-  ia: number;
-  ib: number;
-  tx: number;
-  ty: number;
-};
+
 /**
  * Mind you must be very slow
  * @param a Spline a
@@ -326,11 +322,6 @@ export const subBezier = (
   return subB;
 };
 
-export type ChopPoint = {
-  index: number;
-  curveIndex: number;
-  t: number;
-};
 export const chopAtIntersections = (
   contour: Contour,
   chopPoints: ChopPoint[]
@@ -411,8 +402,6 @@ export const isInsideContour = (p: Vec2, contour: Contour): boolean => {
     .map((c) => xToYCubicCurve(c, p[0])) // Get y for given x
     .filter((y) => y != null) // filter curves that dont ailgn
     .filter((y) => y > p[1]); // filter curves that are below
-
-  console.log(curvesAbove);
 
   return curvesAbove.length % 2 == 1;
 };

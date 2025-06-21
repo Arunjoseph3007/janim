@@ -249,25 +249,27 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    const ci = jf.Circle(200).stroke("#ffffff44").translateX(-300);
-    const sq = jf.Rectangle(600, 200).stroke("#ffffff44").translateX(300);
+    // const ci = jf.Circle(200).stroke("#ffffff44").translateX(80);
+    // const sq = jf.Rectangle(200, 600).stroke("#ffffff44");
+    const ci = jf.Letter('C',"Montserrat").setFontSize(45).stroke("#ffffff44").translate(-180,100);
+    const sq = jf.Rectangle(100, 600).stroke("#ffffff44");
 
     this.add(sq);
     this.add(ci);
 
-    await this.playAll(
-      ci.animate.translate([0, 0]),
-      sq.animate.translate([0, 0])
-    );
+    // await this.playAll(
+    //   ci.animate.translate([0, 0]),
+    //   sq.animate.translate([0, 0])
+    // );
 
     const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3);
     this.add(un);
 
-    await this.playAll(
-      ci.animate.fadeOut(),
-      sq.animate.fadeOut(),
-      un.animate.fadeIn()
-    );
+    // await this.playAll(
+    //   ci.animate.fadeOut(),
+    //   sq.animate.fadeOut(),
+    //   un.animate.fadeIn()
+    // );
   }
 }
 class SubBezier extends Scene {
@@ -385,7 +387,7 @@ async function main() {
     console.log("2d context not supported");
     return;
   }
-  let sc: Scene | null = new SubBezier(ctx);
+  let sc: Scene | null = new BinaryOpsWIP(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {

@@ -1,4 +1,4 @@
-const DEBUG = 0;
+const DEBUG = 1;
 
 import Font from "./font";
 import {
@@ -14,6 +14,7 @@ import {
   Vec3,
   CubicCurve3D,
   Contour3D,
+  Intersection,
 } from "./types";
 import {
   lerpNum,
@@ -461,6 +462,21 @@ export class VObject extends JObject {
       });
     }
   }
+  absorbTranslation() {
+    const [tx, ty] = this.translation;
+
+    this.glyphData.forEach((contour) => {
+      contour.forEach((curve) => {
+        curve.forEach((point) => {
+          point[0] += tx;
+          point[1] += ty;
+        });
+      });
+    });
+
+    this.translation = [0, 0];
+    return this;
+  }
 }
 export class VObject3D extends JObject {
   glyphData: GlpyhData3D = [];
@@ -671,6 +687,21 @@ export class VObject3D extends JObject {
       });
     }
   }
+  absorbTranslation() {
+    const [tx, ty] = this.translation;
+
+    this.glyphData.forEach((contour) => {
+      contour.forEach((curve) => {
+        curve.forEach((point) => {
+          point[0] += tx;
+          point[1] += ty;
+        });
+      });
+    });
+
+    this.translation = [0, 0];
+    return this;
+  }
 }
 export class Cube extends VObject3D {
   w: number;
@@ -752,13 +783,25 @@ export class Cube extends VObject3D {
  * @ignore
  */
 export class Union extends VObject {
+  intersections: Intersection[];
+  intersectionVisited: number[] = [];
   constructor(a: VObject, b: VObject) {
     super();
 
-    // Segmentation logic. Common for all BinaryOps
-    let intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
+    a.absorbTranslation();
+    b.absorbTranslation();
 
-    if (intersections.length == 0) {
+    // Segmentation logic. Common for all BinaryOps
+    this.intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
+
+    const s = this.intersections[0].p;
+    this.addCurve([s, s, s, s]);
+    this.intersections.forEach((i) => this.lineTo(i.p));
+    console.log(structuredClone(this.intersections));
+    return
+
+
+    if (this.intersections.length == 0) {
       a.glyphData.forEach((c) => this.addContour(c));
       b.glyphData.forEach((c) => this.addContour(c));
       return;
@@ -766,7 +809,7 @@ export class Union extends VObject {
 
     const [choppedA, aIndexMap] = chopAtIntersections(
       a.glyphData[0],
-      intersections.map((int, i) => ({
+      this.intersections.map((int, i) => ({
         curveIndex: int.ia,
         t: int.tx,
         index: i,
@@ -774,29 +817,50 @@ export class Union extends VObject {
     );
     const [choppedB, bIndexMap] = chopAtIntersections(
       b.glyphData[0],
-      intersections.map((int, i) => ({
+      this.intersections.map((int, i) => ({
         curveIndex: int.ib,
         t: int.ty,
         index: i,
       }))
     );
 
-    for (let i = 0; i < intersections.length; i++) {
-      const int = intersections[i];
+    for (let i = 0; i < this.intersections.length; i++) {
+      const int = this.intersections[i];
 
       int.ia = aIndexMap[i];
       int.ib = bIndexMap[i];
     }
+    console.log(this.intersections);
 
     // Segment combination logic. Different for all BinaryOps
+    this.intersectionVisited = new Array<number>(
+      this.intersections.length
+    ).fill(0);
+    while (this.intersectionVisited.some((i) => i == 0)) {
+      const newContour = this.extractUnionContour(
+        choppedA,
+        choppedB,
+        this.intersectionVisited.findIndex((i) => i == 0)
+      );
+      this.addContour(newContour);
+    }
+  }
+
+  private extractUnionContour(
+    choppedA: Contour,
+    choppedB: Contour,
+    startPoint: number
+  ) {
+    // Segment combination logic. Different for all BinaryOps
+    this.intersectionVisited[startPoint] = 1;
 
     const unionContour: Contour = [];
 
-    let ia = intersections[0].ia;
-    let ib = intersections[0].ib;
+    let ia = this.intersections[0].ia;
+    let ib = this.intersections[0].ib;
 
     const testPoint = cubicBezierAt(choppedB[ib], 0.1);
-    let isA = isInsideContour(testPoint, a.glyphData[0]);
+    let isA = isInsideContour(testPoint, choppedA);
 
     while (true) {
       if (isA) {
@@ -804,32 +868,34 @@ export class Union extends VObject {
 
         ia = (ia + 1) % choppedA.length;
 
-        const intIdx = intersections.findIndex((int) => int.ia == ia);
+        const intIdx = this.intersections.findIndex((int) => int.ia == ia);
         if (intIdx == 0) {
           break;
         }
         if (intIdx != -1) {
           isA = !isA;
-          ib = intersections[intIdx].ib;
+          ib = this.intersections[intIdx].ib;
+          this.intersectionVisited[intIdx] = 1;
         }
       } else {
         unionContour.push(choppedB[ib]);
 
         ib = (ib + 1) % choppedB.length;
 
-        const intIdx = intersections.findIndex((int) => int.ib == ib);
+        const intIdx = this.intersections.findIndex((int) => int.ib == ib);
         if (intIdx == 0) {
           break;
         }
 
         if (intIdx != -1) {
           isA = !isA;
-          ia = intersections[intIdx].ia;
+          ia = this.intersections[intIdx].ia;
+          this.intersectionVisited[intIdx] = 1;
         }
       }
     }
 
-    this.addContour(unionContour);
+    return unionContour;
   }
 }
 /**

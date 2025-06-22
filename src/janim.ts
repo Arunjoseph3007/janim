@@ -789,7 +789,19 @@ export class Union extends VObject {
     b.absorbTranslation();
 
     // Segmentation logic. Common for all BinaryOps
-    this.glyphData = findUnionContours(a.glyphData[0], b.glyphData[0]);
+    let unionContour: Contour[] = a.glyphData.slice();
+
+    b.glyphData.forEach((cnt) => {
+      let tmpC:Contour[] =[]
+
+      unionContour.forEach(ucnt=>{
+        tmpC.push(...findUnionContours(ucnt,cnt))
+      })
+
+      unionContour = tmpC
+    });
+
+    this.glyphData = unionContour
   }
 }
 /**

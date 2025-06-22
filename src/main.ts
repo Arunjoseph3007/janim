@@ -256,14 +256,13 @@ class BinaryOpsWIP extends Scene {
       .translate(-350, 100);
     const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
 
-    this.add(sq);
-    this.add(ci);
+    // this.add(sq);
+    // this.add(ci);
 
     const un = jf
       .Union(sq, ci)
-      .stroke("green")
-      .setStrokeWidth(3)
-      .fill("#00ffff22");
+      .stroke("transparent")
+      .fill("#00ffff44");
     this.add(un);
   }
 }

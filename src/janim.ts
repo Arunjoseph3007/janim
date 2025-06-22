@@ -14,7 +14,6 @@ import {
   Vec3,
   CubicCurve3D,
   Contour3D,
-  Intersection,
 } from "./types";
 import {
   lerpNum,
@@ -29,13 +28,10 @@ import {
   solvePolynomial,
   subdivide,
   midpoint3D,
-  findIntersections,
   splitBezier3D,
   splitBezier,
   todo,
-  chopAtIntersections,
-  isInsideContour,
-  cubicBezierAt,
+  findUnionContours,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -58,6 +54,9 @@ export const loadLocalFont = async (name: string) => {
   // Hack for working with different basePath in GH Pages
   loadFont(name, await Font.fromURI(`${path}/${name}.ttf`));
 };
+await loadLocalFont("Montserrat");
+await loadLocalFont("JetBrainsMono");
+
 export const loadFontFromUri = async (name: string, uri: string) => {
   loadFont(name, await Font.fromURI(uri));
 };
@@ -783,8 +782,6 @@ export class Cube extends VObject3D {
  * @ignore
  */
 export class Union extends VObject {
-  intersections: Intersection[];
-  intersectionVisited: number[] = [];
   constructor(a: VObject, b: VObject) {
     super();
 
@@ -792,101 +789,7 @@ export class Union extends VObject {
     b.absorbTranslation();
 
     // Segmentation logic. Common for all BinaryOps
-    this.intersections = findIntersections(a.glyphData[0], b.glyphData[0]);
-
-    if (this.intersections.length == 0) {
-      a.glyphData.forEach((c) => this.addContour(c));
-      b.glyphData.forEach((c) => this.addContour(c));
-      return;
-    }
-
-    const [choppedA, aIndexMap] = chopAtIntersections(
-      a.glyphData[0],
-      this.intersections.map((int, i) => ({
-        curveIndex: int.ia,
-        t: int.tx,
-        index: i,
-      }))
-    );
-    const [choppedB, bIndexMap] = chopAtIntersections(
-      b.glyphData[0],
-      this.intersections.map((int, i) => ({
-        curveIndex: int.ib,
-        t: int.ty,
-        index: i,
-      }))
-    );
-
-    for (let i = 0; i < this.intersections.length; i++) {
-      const int = this.intersections[i];
-
-      int.ia = aIndexMap[i];
-      int.ib = bIndexMap[i];
-    }
-
-    // Segment combination logic. Different for all BinaryOps
-    this.intersectionVisited = new Array(this.intersections.length).fill(0);
-    while (this.intersectionVisited.some((i) => i == 0)) {
-      const startPoint = this.intersectionVisited.findIndex((i) => i == 0);
-      const newContour = this.extractUnionContour(
-        choppedA,
-        choppedB,
-        startPoint
-      );
-      this.addContour(newContour);
-    }
-  }
-
-  private extractUnionContour(
-    choppedA: Contour,
-    choppedB: Contour,
-    startPoint: number
-  ) {
-    // Segment combination logic. Different for all BinaryOps
-    this.intersectionVisited[startPoint] = 1;
-
-    const unionContour: Contour = [];
-
-    let ia = this.intersections[startPoint].ia;
-    let ib = this.intersections[startPoint].ib;
-
-    const testPoint = cubicBezierAt(choppedB[ib], 0.1);
-    let isA = isInsideContour(testPoint, choppedA);
-
-    while (true) {
-      if (isA) {
-        unionContour.push(choppedA[ia]);
-
-        ia = (ia + 1) % choppedA.length;
-
-        const intIdx = this.intersections.findIndex((int) => int.ia == ia);
-        if (intIdx == startPoint) {
-          break;
-        }
-        if (intIdx != -1) {
-          isA = !isA;
-          ib = this.intersections[intIdx].ib;
-          this.intersectionVisited[intIdx] = 1;
-        }
-      } else {
-        unionContour.push(choppedB[ib]);
-
-        ib = (ib + 1) % choppedB.length;
-
-        const intIdx = this.intersections.findIndex((int) => int.ib == ib);
-        if (intIdx == startPoint) {
-          break;
-        }
-
-        if (intIdx != -1) {
-          isA = !isA;
-          ia = this.intersections[intIdx].ia;
-          this.intersectionVisited[intIdx] = 1;
-        }
-      }
-    }
-
-    return unionContour;
+    this.glyphData = findUnionContours(a.glyphData[0], b.glyphData[0]);
   }
 }
 /**
@@ -1037,7 +940,7 @@ export class Polygon extends VObject {
 export class Letter extends VObject {
   char: string;
   font: Font;
-  constructor(char: string, font: string) {
+  constructor(char: string, font = "Montserrat") {
     console.assert(char.length == 1, "Letter expects a single character");
     console.assert(font in loadedFonts, "Font not loaded properly");
     super();
@@ -1066,7 +969,7 @@ export class Text extends VObject {
   font: Font;
   maxWidth: number;
   fontSize: number;
-  constructor(str: string, font: string) {
+  constructor(str: string, font = "Montserrat") {
     console.assert(font in loadedFonts, "Font not loaded properly");
     super();
     this.str = str;

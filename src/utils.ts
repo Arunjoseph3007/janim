@@ -229,7 +229,8 @@ export const cubicBezierAt = (p: CubicCurve, t: number): Vec2 => {
       t * t * t * p[3][1],
   ];
 };
-export const dist = (a: Vec2, b: Vec2) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+export const dist = (a: Vec2, b: Vec2) =>
+  (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
 /**
  * @link https://pages.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/Bezier/bezier-sub.html
@@ -448,4 +449,91 @@ export const isInsideContour = (p: Vec2, contour: Contour): boolean => {
     .filter((y) => y > p[1]); // filter curves that are below
 
   return curvesAbove.length % 2 == 1;
+};
+
+export const findUnionContours = (a: Contour, b: Contour): Contour[] => {
+  const intersections = findIntersections(a, b);
+
+  if (intersections.length == 0) {
+    return [a, b];
+  }
+
+  const unionContours: Contour[] = [];
+  const [choppedA, aIndexMap] = chopAtIntersections(
+    a,
+    intersections.map((int, i) => ({
+      curveIndex: int.ia,
+      t: int.tx,
+      index: i,
+    }))
+  );
+  const [choppedB, bIndexMap] = chopAtIntersections(
+    b,
+    intersections.map((int, i) => ({
+      curveIndex: int.ib,
+      t: int.ty,
+      index: i,
+    }))
+  );
+
+  for (let i = 0; i < intersections.length; i++) {
+    const int = intersections[i];
+
+    int.ia = aIndexMap[i];
+    int.ib = bIndexMap[i];
+  }
+
+  // Segment combination logic. Different for all BinaryOps
+  const intersectionVisited: number[] = new Array(intersections.length).fill(0);
+  while (intersectionVisited.some((i) => i == 0)) {
+    const startPoint = intersectionVisited.findIndex((i) => i == 0);
+
+    // Segment combination logic. Different for all BinaryOps
+    intersectionVisited[startPoint] = 1;
+
+    const unionContour: Contour = [];
+
+    let ia = intersections[startPoint].ia;
+    let ib = intersections[startPoint].ib;
+
+    const testPoint = cubicBezierAt(choppedB[ib], 0.1);
+    let isA = isInsideContour(testPoint, choppedA);
+
+    while (true) {
+      if (isA) {
+        unionContour.push(choppedA[ia]);
+
+        ia = (ia + 1) % choppedA.length;
+
+        const intIdx = intersections.findIndex((int) => int.ia == ia);
+        if (intIdx == startPoint) {
+          break;
+        }
+        if (intIdx != -1) {
+          isA = !isA;
+          ib = intersections[intIdx].ib;
+          intersectionVisited[intIdx] = 1;
+        }
+      } else {
+        unionContour.push(choppedB[ib]);
+
+        ib = (ib + 1) % choppedB.length;
+
+        const intIdx = intersections.findIndex((int) => int.ib == ib);
+        if (intIdx == startPoint) {
+          break;
+        }
+
+        if (intIdx != -1) {
+          isA = !isA;
+          ia = intersections[intIdx].ia;
+          intersectionVisited[intIdx] = 1;
+        }
+      }
+    }
+
+    unionContours.push(unionContour);
+  }
+
+  return unionContours;
 };

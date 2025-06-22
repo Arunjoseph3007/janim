@@ -1,5 +1,5 @@
 import "./style.css";
-import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
+import { Cube, Easings, Image, Scene, jf } from "./janim";
 import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
 
@@ -249,27 +249,22 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    // const ci = jf.Circle(200).stroke("#ffffff44").translateX(80);
-    // const sq = jf.Rectangle(200, 600).stroke("#ffffff44");
-    const ci = jf.Letter('C',"Montserrat").setFontSize(45).stroke("#ffffff44").translate(-180,100);
-    const sq = jf.Rectangle(100, 600).stroke("#ffffff44");
+    const ci = jf
+      .Text("Text")
+      .setFontSize(35)
+      .stroke("#ffffff44")
+      .translate(-350, 100);
+    const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
 
     this.add(sq);
     this.add(ci);
 
-    // await this.playAll(
-    //   ci.animate.translate([0, 0]),
-    //   sq.animate.translate([0, 0])
-    // );
-
-    const un = jf.Union(sq, ci).stroke("green").setStrokeWidth(3).fill('#00ffff22');
+    const un = jf
+      .Union(sq, ci)
+      .stroke("green")
+      .setStrokeWidth(3)
+      .fill("#00ffff22");
     this.add(un);
-
-    // await this.playAll(
-    //   ci.animate.fadeOut(),
-    //   sq.animate.fadeOut(),
-    //   un.animate.fadeIn()
-    // );
   }
 }
 class SubBezier extends Scene {
@@ -402,9 +397,6 @@ async function main() {
     });
     sceneSelect.appendChild(optionElm);
   }
-
-  await loadLocalFont("Montserrat");
-  await loadLocalFont("JetBrainsMono");
 
   document.addEventListener("keypress", (e) => {
     if (!sc) {

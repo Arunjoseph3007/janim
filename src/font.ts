@@ -1,5 +1,5 @@
 import { Contour, CubicCurve, GlpyhData, Vec2 } from "./types";
-import { isNthBitOn, lerpVec2, midpoint } from "./utils";
+import { isNthBitOn, midpoint, quadraticToCubicBezier } from "./utils";
 
 /**
  * Ported from python
@@ -193,7 +193,6 @@ class SimpleGlyph {
      * @todo TODO Fix this. we need to be able to draw quadratic bezier curves.
      * atleast good approximations
      */
-    const QuadToCubic = 0.78;
     const glyphData: GlpyhData = [];
     let startIndex = 0;
     let index = 0;
@@ -219,8 +218,8 @@ class SimpleGlyph {
             let start = tmpCurve[0];
             for (let j = 1; j < tmpCurve.length - 2; j++) {
               const cp = midpoint(tmpCurve[j], tmpCurve[j + 1]);
-              const cp2 = lerpVec2(QuadToCubic, tmpCurve[j], cp);
-              contour.push([start, tmpCurve[j], cp2, cp]);
+
+              contour.push(quadraticToCubicBezier(start, tmpCurve[j], cp));
               start = cp;
             }
 
@@ -248,8 +247,8 @@ class SimpleGlyph {
           let start = tmpCurve[0];
           for (let j = 1; j < tmpCurve.length - 2; j++) {
             const cp = midpoint(tmpCurve[j], tmpCurve[j + 1]);
-            const cp2 = lerpVec2(QuadToCubic, tmpCurve[j], cp);
-            contour.push([start, tmpCurve[j], cp2, cp]);
+
+            contour.push(quadraticToCubicBezier(start, tmpCurve[j], cp));
             start = cp;
           }
 

@@ -296,6 +296,19 @@ export const getCurveBounds = (curve: CubicCurve): Bounds => {
   };
 };
 
+export const quadraticToCubicBezier = (
+  p0: Vec2,
+  p1: Vec2,
+  p2: Vec2
+): CubicCurve => {
+  const QuadToCubic = 0.78;
+
+  const cp1 = lerpVec2(QuadToCubic, p0, p1);
+  const cp2 = lerpVec2(QuadToCubic, p1, p2);
+
+  return [p0, cp1, cp2, p2];
+};
+
 type CurveIntersection = {
   tx: number;
   ty: number;
@@ -348,6 +361,22 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
   return intersections;
 };
 
+export const findGlyphIntersections = (
+  a: GlpyhData,
+  b: GlpyhData
+): Intersection[] => {
+  const intersections: Intersection[] = [];
+
+  a.forEach((cntA, ia) => {
+    b.forEach((cntB, ib) => {
+      findIntersections(cntA, cntB).forEach((int) => {
+        intersections.push(int);
+      });
+    });
+  });
+
+  return intersections;
+};
 /**
  * Extract a cubic bezier segment between given t values
  * @link https://www.sciencedirect.com/topics/mathematics/bezier-curve (Section 5.5.4.2)

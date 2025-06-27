@@ -1,5 +1,5 @@
 import "./style.css";
-import { Cube, Easings, Image, Scene, jf } from "./janim";
+import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
 import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
 
@@ -382,6 +382,10 @@ async function main() {
     console.log("2d context not supported");
     return;
   }
+
+  await loadLocalFont("Montserrat");
+  await loadLocalFont("JetBrainsMono");
+
   let sc: Scene | null = new BinaryOpsWIP(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;

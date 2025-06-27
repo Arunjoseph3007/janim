@@ -37,10 +37,25 @@ export enum ColoringMode {
   StrokeAndFill = "StrokeAndFill",
 }
 
-export type Intersection = {
+
+export type CurveIntersection = {
+  tx: number;
+  ty: number;
+  p: Vec2;
+};
+export type ContourIntersection = {
   p: Vec2;
   ia: number;
   ib: number;
+  tx: number;
+  ty: number;
+};
+export type GlyphIntersection = {
+  p: Vec2;
+  ia: number;
+  ib: number;
+  sa: number;
+  sb: number;
   tx: number;
   ty: number;
 };

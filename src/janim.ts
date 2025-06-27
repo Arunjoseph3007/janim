@@ -1,4 +1,4 @@
-const DEBUG = 1;
+const DEBUG = 0;
 
 import Font from "./font";
 import {
@@ -32,7 +32,6 @@ import {
   splitBezier,
   todo,
   findUnionContours,
-  findGlyphIntersections,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -788,19 +787,7 @@ export class Union extends VObject {
     b.absorbTranslation();
 
     // Segmentation logic. Common for all BinaryOps
-    let unionContour = a.glyphData;
-
-    b.glyphData.forEach((cnt) => {
-      let tmpC: Contour[] = [];
-
-      unionContour.forEach((ucnt) => {
-        tmpC.push(...findUnionContours(ucnt, cnt));
-      });
-
-      unionContour = tmpC;
-    });
-
-    this.glyphData = unionContour;
+    this.glyphData = findUnionContours(a.glyphData, b.glyphData);
   }
 }
 /**

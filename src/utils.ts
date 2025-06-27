@@ -529,10 +529,6 @@ export const findUnionContours = (a: GlpyhData, b: GlpyhData): Contour[] => {
 
   console.log(intersections);
 
-  // const uc: Contour = [];
-  // intersections.forEach(({ p }) => uc.push([p, p, p, p]));
-  // return [uc];
-
   // Segment combination logic. Different for all BinaryOps
   const unionContours: Contour[] = [];
   const intersectionVisited: number[] = new Array(intersections.length).fill(0);
@@ -588,8 +584,6 @@ export const findUnionContours = (a: GlpyhData, b: GlpyhData): Contour[] => {
           intersectionVisited[intIdx] = 1;
         }
       }
-
-      // if (unionContour.length > 32) break;
     }
 
     unionContours.push(unionContour);

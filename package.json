@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "lint": "tsc --noEmit",
     "preview": "vite preview",
-    "build-gh": "tsc && vite build --base='/janim'",
+    "build-gh": "vite build --base='/janim'",
     "preview-gh": "vite preview --base='/janim'"
   },
   "devDependencies": {

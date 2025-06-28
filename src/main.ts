@@ -1,6 +1,13 @@
 import "./style.css";
 import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
-import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
+import {
+  findContourIntersections,
+  isInsideContour,
+  range,
+  subBezier,
+  vec2Add,
+  vec2Neg,
+} from "./utils";
 import { CubicCurve } from "./types";
 
 const FACTOR = 70;
@@ -249,6 +256,8 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
+    // const ci = jf.Circle(200);
+    // const sq = jf.Rectangle(600, 200);
     const ci = jf
       .Text("Text")
       .setFontSize(35)
@@ -259,11 +268,13 @@ class BinaryOpsWIP extends Scene {
     this.add(sq);
     this.add(ci);
 
+    console.time("hello")
     const un = jf
-      .Union(sq, ci)
-      .stroke("green")
-      .setStrokeWidth(3)
-      .fill("#00ffff44");
+    .Union(sq, ci)
+    .stroke("green")
+    .setStrokeWidth(3)
+    .fill("#00ffff44");
+    console.timeEnd("hello")
     this.add(un);
   }
 }

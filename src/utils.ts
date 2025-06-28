@@ -4,11 +4,13 @@ import {
   Contour,
   CubicCurve,
   CubicCurve3D,
+  CurveIntersection,
   GlpyhData,
-  Intersection,
+  ContourIntersection,
   TLerpFunc,
   Vec2,
   Vec3,
+  GlyphIntersection,
 } from "./types";
 
 const { max, min, abs, sin, cos } = Math;
@@ -309,11 +311,6 @@ export const quadraticToCubicBezier = (
   return [p0, cp1, cp2, p2];
 };
 
-type CurveIntersection = {
-  tx: number;
-  ty: number;
-  p: Vec2;
-};
 export const findCurveIntersections = (
   a: CubicCurve,
   b: CubicCurve,
@@ -326,7 +323,7 @@ export const findCurveIntersections = (
   const cb = subBezier(b, tb1, tb2);
   if (!checkBoundIntersect(ca, cb)) return [];
 
-  const MIN_GAP = 0.001;
+  const MIN_GAP = 0.0005;
   const mida = (ta1 + ta2) / 2;
   const midb = (tb1 + tb2) / 2;
   if (abs(ta2 - ta1) < MIN_GAP && abs(tb2 - tb1) < MIN_GAP) {
@@ -347,8 +344,11 @@ export const findCurveIntersections = (
  * @param b Spline b
  * @returns
  */
-export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
-  const intersections: Intersection[] = [];
+export const findContourIntersections = (
+  a: Contour,
+  b: Contour
+): ContourIntersection[] => {
+  const intersections: ContourIntersection[] = [];
 
   a.forEach((curveA, ia) => {
     b.forEach((curveB, ib) => {
@@ -364,13 +364,13 @@ export const findIntersections = (a: Contour, b: Contour): Intersection[] => {
 export const findGlyphIntersections = (
   a: GlpyhData,
   b: GlpyhData
-): Intersection[] => {
-  const intersections: Intersection[] = [];
+): GlyphIntersection[] => {
+  const intersections: GlyphIntersection[] = [];
 
-  a.forEach((cntA, ia) => {
-    b.forEach((cntB, ib) => {
-      findIntersections(cntA, cntB).forEach((int) => {
-        intersections.push(int);
+  a.forEach((cntA, sa) => {
+    b.forEach((cntB, sb) => {
+      findContourIntersections(cntA, cntB).forEach((int) => {
+        intersections.push({ ...int, sa, sb });
       });
     });
   });
@@ -480,39 +480,57 @@ export const isInsideContour = (p: Vec2, contour: Contour): boolean => {
   return curvesAbove.length % 2 == 1;
 };
 
-export const findUnionContours = (a: Contour, b: Contour): Contour[] => {
-  const intersections = findIntersections(a, b);
+export const findUnionContours = (a: GlpyhData, b: GlpyhData): Contour[] => {
+  const intersections = findGlyphIntersections(a, b);
 
   if (intersections.length == 0) {
-    return [a, b];
+    return [...a, ...b];
   }
 
-  const unionContours: Contour[] = [];
-  const [choppedA, aIndexMap] = chopAtIntersections(
-    a,
-    intersections.map((int, i) => ({
-      curveIndex: int.ia,
-      t: int.tx,
-      index: i,
-    }))
-  );
-  const [choppedB, bIndexMap] = chopAtIntersections(
-    b,
-    intersections.map((int, i) => ({
-      curveIndex: int.ib,
-      t: int.ty,
-      index: i,
-    }))
-  );
+  const choppedA: GlpyhData = [];
+  const choppedB: GlpyhData = [];
 
-  for (let i = 0; i < intersections.length; i++) {
-    const int = intersections[i];
+  a.forEach((ca, sa) => {
+    const [choppedCA, indexMap] = chopAtIntersections(
+      ca,
+      intersections
+        .map((int, i) => ({
+          curveIndex: int.ia,
+          t: int.tx,
+          index: i,
+          sa: int.sa,
+        }))
+        .filter((c) => c.sa == sa)
+    );
+    choppedA.push(choppedCA);
 
-    int.ia = aIndexMap[i];
-    int.ib = bIndexMap[i];
-  }
+    for (const i in indexMap) {
+      intersections[i].ia = indexMap[i];
+    }
+  });
+  b.forEach((cb, sb) => {
+    const [choppedCB, indexMap] = chopAtIntersections(
+      cb,
+      intersections
+        .map((int, i) => ({
+          curveIndex: int.ib,
+          t: int.ty,
+          index: i,
+          sb: int.sb,
+        }))
+        .filter((c) => c.sb == sb)
+    );
+    choppedB.push(choppedCB);
+
+    for (const i in indexMap) {
+      intersections[i].ib = indexMap[i];
+    }
+  });
+
+  console.log(intersections);
 
   // Segment combination logic. Different for all BinaryOps
+  const unionContours: Contour[] = [];
   const intersectionVisited: number[] = new Array(intersections.length).fill(0);
   while (intersectionVisited.some((i) => i == 0)) {
     const startPoint = intersectionVisited.findIndex((i) => i == 0);
@@ -523,39 +541,46 @@ export const findUnionContours = (a: Contour, b: Contour): Contour[] => {
     const unionContour: Contour = [];
 
     let ia = intersections[startPoint].ia;
+    let sa = intersections[startPoint].sa;
     let ib = intersections[startPoint].ib;
+    let sb = intersections[startPoint].sb;
 
-    const testPoint = cubicBezierAt(choppedB[ib], 0.1);
-    let isA = isInsideContour(testPoint, choppedA);
+    const testPoint = cubicBezierAt(choppedB[sb][ib], 0.1);
+    let isA = isInsideContour(testPoint, choppedA[sa]);
 
     while (true) {
       if (isA) {
-        unionContour.push(choppedA[ia]);
+        unionContour.push(choppedA[sa][ia]);
 
-        ia = (ia + 1) % choppedA.length;
+        ia = (ia + 1) % choppedA[sa].length;
 
-        const intIdx = intersections.findIndex((int) => int.ia == ia);
+        const intIdx = intersections.findIndex(
+          (int) => int.sa == sa && int.ia == ia
+        );
         if (intIdx == startPoint) {
           break;
         }
         if (intIdx != -1) {
           isA = !isA;
           ib = intersections[intIdx].ib;
+          sb = intersections[intIdx].sb;
           intersectionVisited[intIdx] = 1;
         }
       } else {
-        unionContour.push(choppedB[ib]);
+        unionContour.push(choppedB[sb][ib]);
 
-        ib = (ib + 1) % choppedB.length;
+        ib = (ib + 1) % choppedB[sb].length;
 
-        const intIdx = intersections.findIndex((int) => int.ib == ib);
+        const intIdx = intersections.findIndex(
+          (int) => int.sb == sb && int.ib == ib
+        );
         if (intIdx == startPoint) {
           break;
         }
-
         if (intIdx != -1) {
           isA = !isA;
           ia = intersections[intIdx].ia;
+          sa = intersections[intIdx].sa;
           intersectionVisited[intIdx] = 1;
         }
       }

@@ -1,14 +1,8 @@
 import "./style.css";
 import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
-import {
-  findContourIntersections,
-  isInsideContour,
-  range,
-  subBezier,
-  vec2Add,
-  vec2Neg,
-} from "./utils";
+import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
+import WasnInit from "../wasm/pkg/wasm.js";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -268,13 +262,13 @@ class BinaryOpsWIP extends Scene {
     this.add(sq);
     this.add(ci);
 
-    console.time("hello")
+    console.time("hello");
     const un = jf
-    .Union(sq, ci)
-    .stroke("green")
-    .setStrokeWidth(3)
-    .fill("#00ffff44");
-    console.timeEnd("hello")
+      .Union(sq, ci)
+      .stroke("green")
+      .setStrokeWidth(3)
+      .fill("#00ffff44");
+    console.timeEnd("hello");
     this.add(un);
   }
 }
@@ -433,4 +427,4 @@ async function main() {
   sc.mainLoop();
 }
 
-main();
+WasnInit().then(main);

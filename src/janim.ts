@@ -35,6 +35,7 @@ import {
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
+import { add } from "../wasm/pkg/wasm";
 
 const { PI, tan } = Math;
 
@@ -786,7 +787,6 @@ export class Union extends VObject {
     a.absorbTranslation();
     b.absorbTranslation();
 
-    // Segmentation logic. Common for all BinaryOps
     this.glyphData = findUnionContours(a.glyphData, b.glyphData);
   }
 }

@@ -8,11 +8,15 @@
     "build": "vite build",
     "lint": "tsc --noEmit",
     "preview": "vite preview",
+    "build-wasm": "wasm-pack build ./wasm --target web",
     "build-gh": "vite build --base='/janim'",
     "preview-gh": "vite preview --base='/janim'"
   },
   "devDependencies": {
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "pkg": "file:./wasm/pkg/wasm"
   }
 }

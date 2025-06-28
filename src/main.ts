@@ -268,11 +268,13 @@ class BinaryOpsWIP extends Scene {
     this.add(sq);
     this.add(ci);
 
+    console.time("hello")
     const un = jf
-      .Union(sq, ci)
-      .stroke("green")
-      .setStrokeWidth(3)
-      .fill("#00ffff44");
+    .Union(sq, ci)
+    .stroke("green")
+    .setStrokeWidth(3)
+    .fill("#00ffff44");
+    console.timeEnd("hello")
     this.add(un);
   }
 }

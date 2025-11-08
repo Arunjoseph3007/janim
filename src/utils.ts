@@ -466,7 +466,6 @@ export const xToYCubicCurve = (curve: CubicCurve, x: number): number | null => {
 
 /**
  * Returns if a point p is inside spline contour
- * @todo
  * @param p
  * @param contour
  * @returns

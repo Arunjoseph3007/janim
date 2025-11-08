@@ -1,7 +1,8 @@
 import "./style.css";
-import { Cube, Easings, Image, Scene, jf, loadLocalFont } from "./janim";
+import { Cube, Image, Scene, jf, loadLocalFont } from "./janim";
 import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
+import { Easings } from "./easing";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;

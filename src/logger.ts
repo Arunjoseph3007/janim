@@ -1,11 +1,15 @@
 enum LogLevel {
-  TRACE = 0,
-  DEBUG = 1,
-  INFO = 2,
-  WARN = 3,
-  ERROR = 4,
-  FATAL = 5,
+  TRACE = 1,
+  DEBUG = 2,
+  INFO = 3,
+  WARN = 4,
+  ERROR = 5,
+  FATAL = 6,
+  NONE = 7,
 }
+
+type LogFunc = (...data: any) => void;
+const noop: LogFunc = () => {};
 
 /**
  * Ths motivation behind this is to setup permanent logs instead of adding them when required
@@ -15,9 +19,28 @@ export default class Logger {
   label: string;
   level: LogLevel;
 
+  trace: LogFunc = noop;
+  debug: LogFunc = noop;
+  info: LogFunc = noop;
+  warn: LogFunc = noop;
+  error: LogFunc = noop;
+  fatal: LogFunc = noop;
+  assert = console.assert;
+
   constructor(label: string = "logger") {
     this.label = label;
-    this.level = LogLevel.DEBUG;
+    this.level = LogLevel.INFO;
+
+    this.adjustByLevel();
+  }
+
+  private adjustByLevel() {
+    this.trace = this.level >= LogLevel.TRACE ? console.trace : noop;
+    this.debug = this.level >= LogLevel.DEBUG ? console.debug : noop;
+    this.info = this.level >= LogLevel.INFO ? console.info : noop;
+    this.warn = this.level >= LogLevel.WARN ? console.warn : noop;
+    this.error = this.level >= LogLevel.ERROR ? console.error : noop;
+    this.fatal = this.level >= LogLevel.FATAL ? console.error : noop;
   }
 
   extend(label: string) {
@@ -26,57 +49,13 @@ export default class Logger {
     return extended;
   }
 
-  private getLevelString(level: LogLevel) {
-    switch (level) {
-      case LogLevel.TRACE:
-        return "TRACE";
-      case LogLevel.DEBUG:
-        return "DEBUG";
-      case LogLevel.INFO:
-        return "INFO";
-      case LogLevel.WARN:
-        return "WARN";
-      case LogLevel.ERROR:
-        return "ERROR";
-      case LogLevel.FATAL:
-        return "FATAL";
-    }
-  }
-
-  getPrefix(level: LogLevel): any[] {
-    return [this.label, this.getLevelString(level)];
-  }
-
   setLogLevel(level: LogLevel) {
     this.level = level;
+
+    this.adjustByLevel();
   }
 
-  assert(condition?: boolean, ...data: any[]): void {
-    console.assert(condition, ...data);
-  }
-
-  trace(...data: any[]) {
-    if (this.level < LogLevel.TRACE) return;
-    console.trace(this.label, ...data);
-  }
-  debug(...data: any[]) {
-    if (this.level < LogLevel.DEBUG) return;
-    console.debug(this.label, ...data);
-  }
-  info(...data: any[]) {
-    if (this.level < LogLevel.INFO) return;
-    console.info(this.label, ...data);
-  }
-  warn(...data: any[]) {
-    if (this.level < LogLevel.WARN) return;
-    console.warn(this.label, ...data);
-  }
-  error(...data: any[]) {
-    if (this.level < LogLevel.ERROR) return;
-    console.error(this.label, ...data);
-  }
-  fatal(...data: any[]) {
-    if (this.level < LogLevel.FATAL) return;
-    console.error(this.label, ...data);
+  silence() {
+    this.setLogLevel(LogLevel.NONE);
   }
 }

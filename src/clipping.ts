@@ -42,8 +42,8 @@ export const findCurveIntersections = (
 };
 
 export interface ContourIntersection extends CurveIntersection {
-  cntA: number;
-  cntB: number;
+  curveA: number;
+  curveB: number;
   // PLUS CurveIntersection feilds  { tx, ty, p}
 }
 /**
@@ -58,10 +58,10 @@ export const findContourIntersections = (
 ): ContourIntersection[] => {
   const intersections: ContourIntersection[] = [];
 
-  a.forEach((curveA, cntA) => {
-    b.forEach((curveB, cntB) => {
+  a.forEach((curveA, curveAIdx) => {
+    b.forEach((curveB, curveBIdx) => {
       findCurveIntersections(curveA, curveB).forEach((int) => {
-        intersections.push({ ...int, cntA, cntB });
+        intersections.push({ ...int, curveA: curveAIdx, curveB: curveBIdx });
       });
     });
   });
@@ -70,8 +70,8 @@ export const findContourIntersections = (
 };
 
 export interface GlyphIntersection extends ContourIntersection {
-  glyphA: number;
-  glyphB: number;
+  contourA: number;
+  contourB: number;
   // PLUS ContourIntersection feilds  { tx, ty, p, ia, ib}
 }
 export const findGlyphIntersections = (
@@ -80,10 +80,14 @@ export const findGlyphIntersections = (
 ): GlyphIntersection[] => {
   const intersections: GlyphIntersection[] = [];
 
-  a.forEach((cntA, glyphA) => {
-    b.forEach((cntB, glyphB) => {
+  a.forEach((cntA, contourAIdx) => {
+    b.forEach((cntB, contourBIdx) => {
       findContourIntersections(cntA, cntB).forEach((int) => {
-        intersections.push({ ...int, glyphA, glyphB });
+        intersections.push({
+          ...int,
+          contourA: contourAIdx,
+          contourB: contourBIdx,
+        });
       });
     });
   });
@@ -113,20 +117,20 @@ export const subBezier = (
 export type ChopPoint = {
   index: number;
   curveIndex: number;
-  glyphIndex: number;
+  contourIndex: number;
   t: number;
 };
 export const chopAtIntersections = (
   contour: Contour,
   chopPoints: ChopPoint[],
-  glyphIndex: number
+  contourIndex: number
 ): [Contour, Record<number, number>] => {
   const chopped: Contour = [];
   const indexMap: Record<number, number> = {};
 
   contour.forEach((curve, i) => {
     const curveChopPoints = chopPoints
-      .filter((cp) => cp.glyphIndex == glyphIndex && cp.curveIndex == i)
+      .filter((cp) => cp.contourIndex == contourIndex && cp.curveIndex == i)
       .sort((a, b) => a.t - b.t);
 
     if (curveChopPoints.length == 0) {
@@ -207,22 +211,18 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
     return [...a, ...b];
   }
 
-  console.log({intersections});
-
-  // return [intersections.map((int) => [int.p, int.p, int.p, int.p])];
-
   const unionGlyph: GlpyhData = [];
 
-  const choppedA = a.map((cnt, glyphI) => {
+  const choppedA = a.map((cnt, contourIndex) => {
     const [choppedCntA, indexMap] = chopAtIntersections(
       cnt,
-      intersections.map((int, i) => ({
-        curveIndex: int.cntA,
-        glyphIndex: int.glyphA,
+      intersections.map<ChopPoint>((int, i) => ({
+        curveIndex: int.curveA,
+        contourIndex: int.contourA,
         t: int.ta,
         index: i,
       })),
-      glyphI
+      contourIndex
     );
 
     // it contour is completely disjoint
@@ -231,22 +231,22 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
     }
 
     for (const a in indexMap) {
-      intersections[a].cntA = indexMap[a];
+      intersections[a].curveA = indexMap[a];
     }
 
     return choppedCntA;
   });
 
-  const choppedB = b.map((cnt, glyphI) => {
+  const choppedB = b.map((cnt, contourIndex) => {
     const [choppedCntB, indexMap] = chopAtIntersections(
       cnt,
-      intersections.map((int, i) => ({
-        curveIndex: int.cntB,
-        glyphIndex: int.glyphB,
+      intersections.map<ChopPoint>((int, i) => ({
+        curveIndex: int.curveB,
+        contourIndex: int.contourB,
         t: int.tb,
         index: i,
       })),
-      glyphI
+      contourIndex
     );
 
     // it contour is completely disjoint
@@ -255,7 +255,7 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
     }
 
     for (const a in indexMap) {
-      intersections[a].cntB = indexMap[a];
+      intersections[a].curveB = indexMap[a];
     }
     return choppedCntB;
   });
@@ -272,44 +272,36 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
     const unionContour: Contour = [];
 
-    const _int = intersections[startPoint];
-    let ia = _int.cntA;
-    let ib = _int.cntB;
-    let ga = _int.glyphA;
-    let gb = _int.glyphB;
+    let { contourA, contourB, curveA, curveB } = intersections[startPoint];
 
-    const testPoint = cubicBezierAt(choppedB[gb][ib], 0.1);
-    let isA = isInsideContour(testPoint, choppedA[ga]);
+    const testPoint = cubicBezierAt(choppedB[contourB][curveB], 0.1);
+    let isA = isInsideContour(testPoint, choppedA[contourA]);
 
     while (true) {
-      console.log({ isA, ia, ib, ga, gb });
-
       if (isA) {
-        console.log(ga, ia);
+        unionContour.push(choppedA[contourA][curveA]);
 
-        unionContour.push(choppedA[ga][ia]);
-
-        ia = (ia + 1) % choppedA[ga].length;
+        curveA = (curveA + 1) % choppedA[contourA].length;
 
         const intIdx = intersections.findIndex(
-          (int) => int.glyphA == ga && int.cntA == ia
+          (int) => int.contourA == contourA && int.curveA == curveA
         );
         if (intIdx == startPoint) {
           break;
         }
         if (intIdx != -1) {
           isA = !isA;
-          ib = intersections[intIdx].cntB;
-          gb = intersections[intIdx].glyphB;
+          curveB = intersections[intIdx].curveB;
+          contourB = intersections[intIdx].contourB;
           intersectionVisited[intIdx] = 1;
         }
       } else {
-        unionContour.push(choppedB[gb][ib]);
+        unionContour.push(choppedB[contourB][curveB]);
 
-        ib = (ib + 1) % choppedB[gb].length;
+        curveB = (curveB + 1) % choppedB[contourB].length;
 
         const intIdx = intersections.findIndex(
-          (int) => int.glyphB == gb && int.cntB == ib
+          (int) => int.contourB == contourB && int.curveB == curveB
         );
         if (intIdx == startPoint) {
           break;
@@ -317,8 +309,8 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
         if (intIdx != -1) {
           isA = !isA;
-          ia = intersections[intIdx].cntA;
-          ga = intersections[intIdx].glyphA;
+          curveA = intersections[intIdx].curveA;
+          contourA = intersections[intIdx].contourA;
           intersectionVisited[intIdx] = 1;
         }
       }

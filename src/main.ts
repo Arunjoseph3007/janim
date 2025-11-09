@@ -1,8 +1,9 @@
 import "./style.css";
 import { Cube, Image, Scene, jf, loadLocalFont } from "./janim";
-import { isInsideContour, range, subBezier, vec2Add, vec2Neg } from "./utils";
+import { range, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
 import { Easings } from "./easing";
+import { isInsideContour, subBezier } from "./clipping";
 
 const FACTOR = 70;
 const WIDTH = 16 * FACTOR;
@@ -251,10 +252,10 @@ class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
     const ci = jf
-      .Text("Text")
+      .Text("Q")
       .setFontSize(35)
       .stroke("#ffffff44")
-      .translate(-350, 100);
+      .translate(-300, 90);
     const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
 
     this.add(sq);

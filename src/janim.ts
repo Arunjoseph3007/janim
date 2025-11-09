@@ -29,11 +29,11 @@ import {
   splitBezier3D,
   splitBezier,
   todo,
-  findUnionContours,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
 import { linear } from "./easing";
+import { findUnion } from "./clipping";
 
 const { PI, tan } = Math;
 
@@ -402,6 +402,8 @@ export class VObject extends JObject {
       });
     }
   }
+
+  // TODO something is messed up here eg. jf.Rectangle(600, 100).translate(-100, 0);
   absorbTranslation() {
     const [tx, ty] = this.translation;
 
@@ -729,20 +731,26 @@ export class Union extends VObject {
     a.absorbTranslation();
     b.absorbTranslation();
 
-    // Segmentation logic. Common for all BinaryOps
-    let unionContour = a.glyphData;
+    this.glyphData = findUnion(
+      structuredClone(a.glyphData),
+      structuredClone(b.glyphData)
+    );
+    console.log(this.glyphData);
+  }
+}
+/**
+ * WIP: still not usefull
+ * @experimental
+ * @ignore
+ */
+export class Intersection extends VObject {
+  constructor(a: VObject, b: VObject) {
+    super();
 
-    b.glyphData.forEach((cnt) => {
-      let tmpC: Contour[] = [];
+    a.absorbTranslation();
+    b.absorbTranslation();
 
-      unionContour.forEach((ucnt) => {
-        tmpC.push(...findUnionContours(ucnt, cnt));
-      });
-
-      unionContour = tmpC;
-    });
-
-    this.glyphData = unionContour;
+    todo();
   }
 }
 /**
@@ -1878,6 +1886,7 @@ export const jf = {
   Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
   Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
   Union: (...a: _CP<typeof Union>) => new Union(...a),
+  Intersection: (...a: _CP<typeof Intersection>) => new Intersection(...a),
   // 3D
   VObject3D: (...a: _CP<typeof VObject3D>) => new VObject3D(...a),
   Cube: (...a: _CP<typeof Cube>) => new Cube(...a),

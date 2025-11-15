@@ -227,7 +227,10 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
     // it contour is completely disjoint
     if (choppedCntA.length == cnt.length) {
-      unionGlyph.push(cnt);
+      // and contour is not fully inside another contour
+      if (b.every((bCnt) => !isInsideContour(cnt[0][0], bCnt))) {
+        unionGlyph.push(cnt);
+      }
     }
 
     for (const a in indexMap) {
@@ -251,7 +254,10 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
     // it contour is completely disjoint
     if (choppedCntB.length == cnt.length) {
-      unionGlyph.push(cnt);
+      // and contour is not fully inside another contour
+      if (a.every((aCnt) => !isInsideContour(cnt[0][0], aCnt))) {
+        unionGlyph.push(cnt);
+      }
     }
 
     for (const a in indexMap) {
@@ -264,8 +270,6 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
   const intersectionVisited: number[] = new Array(intersections.length).fill(0);
   while (intersectionVisited.some((i) => i == 0)) {
     const startPoint = intersectionVisited.findIndex((i) => i == 0);
-
-    console.log({ startPoint });
 
     // Segment combination logic. Different for all BinaryOps
     intersectionVisited[startPoint] = 1;

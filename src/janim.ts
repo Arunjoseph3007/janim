@@ -735,7 +735,6 @@ export class Union extends VObject {
       structuredClone(a.glyphData),
       structuredClone(b.glyphData)
     );
-    console.log(this.glyphData);
   }
 }
 /**

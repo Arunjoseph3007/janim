@@ -251,25 +251,22 @@ class Tracker extends Scene {
 class BinaryOpsWIP extends Scene {
   async construct() {
     this.selfCenter = true;
-    // const ci = jf.Circle(200);
-    // const sq = jf.Rectangle(600, 200);
     const ci = jf
-      .Text("Q")
+      .Text("A")
       .setFontSize(35)
       .stroke("#ffffff44")
       .translate(-300, 90);
     const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
 
-    this.add(sq);
-    this.add(ci);
-
-    console.time("hello")
+    this.add(sq, ci);
+    
+    console.time("union.constructor")
     const un = jf
     .Union(sq, ci)
     .stroke("green")
     .setStrokeWidth(3)
     .fill("#00ffff44");
-    console.timeEnd("hello")
+    console.timeEnd("union.constructor")
     this.add(un);
   }
 }

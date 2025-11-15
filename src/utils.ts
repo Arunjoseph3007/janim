@@ -299,10 +299,8 @@ export const quadraticToCubicBezier = (
   p1: Vec2,
   p2: Vec2
 ): CubicCurve => {
-  const QuadToCubic = 0.78;
-
-  const cp1 = lerpVec2(QuadToCubic, p0, p1);
-  const cp2 = lerpVec2(QuadToCubic, p1, p2);
+  const cp1 = lerpVec2(2 / 3, p0, p1);
+  const cp2 = lerpVec2(2 / 3, p2, p1);
 
   return [p0, cp1, cp2, p2];
 };

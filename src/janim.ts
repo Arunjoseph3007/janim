@@ -29,6 +29,7 @@ import {
   splitBezier3D,
   splitBezier,
   todo,
+  quadraticToCubicBezier,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -312,7 +313,7 @@ export class VObject extends JObject {
     return this;
   }
   quadTo(control: Vec2, point: Vec2) {
-    this.addCurve([[...this.pos()], [...control], [...control], point]);
+    this.addCurve(quadraticToCubicBezier(this.pos(), control, point));
     return this;
   }
   getBounds(): Bounds {

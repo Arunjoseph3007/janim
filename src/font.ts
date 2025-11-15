@@ -196,6 +196,7 @@ class SimpleGlyph {
     const glyphData: GlpyhData = [];
     let startIndex = 0;
     let index = 0;
+
     this.endPtsOfContours.forEach((length) => {
       const contour: Contour = [];
       let tmpCurve: Vec2[] = [];
@@ -210,7 +211,7 @@ class SimpleGlyph {
           tmpCurve.push(p);
         } else if (tmpCurve.length == 1) {
           const cp = midpoint(tmpCurve[0], p);
-          contour.push([tmpCurve[0], cp, cp, p]);
+          contour.push(quadraticToCubicBezier(tmpCurve[0], cp, p));
           tmpCurve = [p];
         } else if (tmpCurve.length > 1) {
           tmpCurve.push(p);
@@ -223,12 +224,13 @@ class SimpleGlyph {
               start = cp;
             }
 
-            contour.push([
-              start,
-              tmpCurve[tmpCurve.length - 2],
-              tmpCurve[tmpCurve.length - 2],
-              tmpCurve[tmpCurve.length - 1],
-            ]);
+            contour.push(
+              quadraticToCubicBezier(
+                start,
+                tmpCurve[tmpCurve.length - 2],
+                tmpCurve[tmpCurve.length - 1]
+              )
+            );
           }
 
           tmpCurve = [p];
@@ -240,7 +242,7 @@ class SimpleGlyph {
       if (tmpCurve.length == 1) {
         const startPoint = this.points[startIndex];
         const cp = midpoint(tmpCurve[0], startPoint);
-        contour.push([tmpCurve[0], cp, cp, startPoint]);
+        contour.push(quadraticToCubicBezier(tmpCurve[0], cp, startPoint));
       } else {
         tmpCurve.push(this.points[startIndex]);
         {
@@ -252,12 +254,13 @@ class SimpleGlyph {
             start = cp;
           }
 
-          contour.push([
-            start,
-            tmpCurve[tmpCurve.length - 2],
-            tmpCurve[tmpCurve.length - 2],
-            tmpCurve[tmpCurve.length - 1],
-          ]);
+          contour.push(
+            quadraticToCubicBezier(
+              start,
+              tmpCurve[tmpCurve.length - 2],
+              tmpCurve[tmpCurve.length - 1]
+            )
+          );
         }
       }
 

@@ -38,11 +38,12 @@ export default class JLogger {
   private adjustByLevel() {
     this.trace = this.level <= JLogLevel.TRACE ? console.trace : noop;
     this.debug = this.level <= JLogLevel.DEBUG ? console.debug : noop;
-    this.log = this.level <= JLogLevel.DEBUG ? console.info : noop;
     this.info = this.level <= JLogLevel.INFO ? console.info : noop;
     this.warn = this.level <= JLogLevel.WARN ? console.warn : noop;
     this.error = this.level <= JLogLevel.ERROR ? console.error : noop;
     this.fatal = this.level <= JLogLevel.FATAL ? console.error : noop;
+
+    this.log = this.level <= JLogLevel.DEBUG ? console.info : noop;
   }
 
   extend(label: string) {

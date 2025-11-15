@@ -248,7 +248,29 @@ class Tracker extends Scene {
     await this.play(va);
   }
 }
-class BinaryOpsWIP extends Scene {
+class IntersectionWIP extends Scene {
+  async construct() {
+    this.selfCenter = true;
+    const tx = jf
+      .Text("Q")
+      .setFontSize(35)
+      .stroke("#ffffff44")
+      .translate(-350, 90);
+    const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
+
+    this.add(tx, sq);
+
+    console.time("union.constructor");
+    const un = jf
+      .Intersection(sq, tx)
+      .stroke("green")
+      .setStrokeWidth(3)
+      .fill("#00ffff44");
+    console.timeEnd("union.constructor");
+    this.add(un);
+  }
+}
+class UnionWIP extends Scene {
   async construct() {
     this.selfCenter = true;
     const tx = jf
@@ -365,7 +387,8 @@ const SceneMap: Record<string, typeof Scene> = {
   AxesAndPlotting,
   Images,
   Tracker,
-  BinaryOpsWIP,
+  IntersectionWIP,
+  UnionWIP,
   SubBezier,
   ThreeDCube,
   QWriteAnim,
@@ -389,7 +412,7 @@ async function main() {
   await loadLocalFont("Montserrat");
   await loadLocalFont("JetBrainsMono");
 
-  let sc: Scene | null = new BinaryOpsWIP(ctx);
+  let sc: Scene | null = new IntersectionWIP(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {

@@ -33,14 +33,11 @@ import {
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
 import { linear } from "./easing";
-import { findUnion } from "./clipping";
+import { findIntersection, findUnion } from "./clipping";
 import JLogger, { JLogLevel } from "./logger";
 
 const logger = new JLogger("janim");
 logger.setLogLevel(JLogLevel.DEBUG);
-if (!DEBUG) {
-  logger.silence();
-}
 
 const { PI, tan } = Math;
 
@@ -737,10 +734,7 @@ export class Union extends VObject {
     a.absorbTranslation();
     b.absorbTranslation();
 
-    this.glyphData = findUnion(
-      structuredClone(a.glyphData),
-      structuredClone(b.glyphData)
-    );
+    this.glyphData = findUnion(a.glyphData, b.glyphData);
   }
 }
 /**
@@ -755,7 +749,7 @@ export class Intersection extends VObject {
     a.absorbTranslation();
     b.absorbTranslation();
 
-    todo();
+    this.glyphData = findIntersection(a.glyphData, b.glyphData);
   }
 }
 /**

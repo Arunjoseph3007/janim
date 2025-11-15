@@ -325,3 +325,125 @@ export const findUnion = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
   return unionGlyph;
 };
+
+export const findIntersection = (a: GlpyhData, b: GlpyhData): GlpyhData => {
+  const intersections = findGlyphIntersections(a, b);
+
+  if (intersections.length == 0) {
+    return [...a, ...b];
+  }
+
+  const unionGlyph: GlpyhData = [];
+
+  const choppedA = a.map((cnt, contourIndex) => {
+    const [choppedCntA, indexMap] = chopAtIntersections(
+      cnt,
+      intersections.map<ChopPoint>((int, i) => ({
+        curveIndex: int.curveA,
+        contourIndex: int.contourA,
+        t: int.ta,
+        index: i,
+      })),
+      contourIndex
+    );
+
+    // it contour is completely disjoint
+    if (choppedCntA.length == cnt.length) {
+      // and contour is not fully inside another contour
+      if (b.some((bCnt) => isInsideContour(cnt[0][0], bCnt))) {
+        unionGlyph.push(cnt);
+      }
+    }
+
+    for (const a in indexMap) {
+      intersections[a].curveA = indexMap[a];
+    }
+
+    return choppedCntA;
+  });
+
+  const choppedB = b.map((cnt, contourIndex) => {
+    const [choppedCntB, indexMap] = chopAtIntersections(
+      cnt,
+      intersections.map<ChopPoint>((int, i) => ({
+        curveIndex: int.curveB,
+        contourIndex: int.contourB,
+        t: int.tb,
+        index: i,
+      })),
+      contourIndex
+    );
+
+    // it contour is completely disjoint
+    if (choppedCntB.length == cnt.length) {
+      // and contour is not fully inside another contour
+      if (a.some((aCnt) => isInsideContour(cnt[0][0], aCnt))) {
+        unionGlyph.push(cnt);
+      }
+    }
+
+    for (const a in indexMap) {
+      intersections[a].curveB = indexMap[a];
+    }
+    return choppedCntB;
+  });
+
+  // Segment combination logic. Different for all BinaryOps
+  const intersectionVisited: number[] = new Array(intersections.length).fill(0);
+  while (intersectionVisited.some((i) => i == 0)) {
+    const startPoint = intersectionVisited.findIndex((i) => i == 0);
+
+    // Segment combination logic. Different for all BinaryOps
+    intersectionVisited[startPoint] = 1;
+
+    const unionContour: Contour = [];
+
+    let { contourA, contourB, curveA, curveB } = intersections[startPoint];
+
+    const testPoint = cubicBezierAt(choppedB[contourB][curveB], 0.1);
+    let isA = !isInsideContour(testPoint, choppedA[contourA]);
+
+    while (true) {
+      if (isA) {
+        unionContour.push(choppedA[contourA][curveA]);
+
+        curveA = (curveA + 1) % choppedA[contourA].length;
+
+        const intIdx = intersections.findIndex(
+          (int) => int.contourA == contourA && int.curveA == curveA
+        );
+        if (intIdx == startPoint) {
+          break;
+        }
+        if (intIdx != -1) {
+          isA = !isA;
+          curveB = intersections[intIdx].curveB;
+          contourB = intersections[intIdx].contourB;
+          intersectionVisited[intIdx] = 1;
+        }
+      } else {
+        unionContour.push(choppedB[contourB][curveB]);
+
+        curveB = (curveB + 1) % choppedB[contourB].length;
+
+        const intIdx = intersections.findIndex(
+          (int) => int.contourB == contourB && int.curveB == curveB
+        );
+        if (intIdx == startPoint) {
+          break;
+        }
+
+        if (intIdx != -1) {
+          isA = !isA;
+          curveA = intersections[intIdx].curveA;
+          contourA = intersections[intIdx].contourA;
+          intersectionVisited[intIdx] = 1;
+        }
+      }
+    }
+
+    unionGlyph.push(unionContour);
+  }
+
+  return unionGlyph;
+};

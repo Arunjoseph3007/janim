@@ -39,7 +39,7 @@ import JLogger, { JLogLevel } from "./logger";
 const logger = new JLogger("janim");
 logger.setLogLevel(JLogLevel.DEBUG);
 
-const { PI, tan } = Math;
+const { PI, min, max, floor, tan, sin, cos, atan2, sqrt } = Math;
 
 /*##########################################################
 ######################  FONT STUFF  ########################
@@ -410,20 +410,31 @@ export class VObject extends JObject {
   absorbTransforms() {
     const [tx, ty] = this.translation;
     const [sx, sy] = this.scaling;
+    const r = this.rotation;
 
-    logger.warn("TODO: `absorbTransforms` rotations are not supported right now");
     for (const contour of this.glyphData) {
       for (const curve of contour) {
         for (const point of curve) {
-          // TODO: also handle rotations
-          point[0] = (point[0] + tx) * sx;
-          point[1] = (point[1] + ty) * sy;
+          // translations
+          point[0] += tx;
+          point[1] += ty;
+
+          // scaling
+          point[0] *= sx;
+          point[1] *= sy;
+
+          // rotation
+          const mag = sqrt(point[0] ** 2 + point[1] ** 2);
+          const deg = atan2(point[1], point[0]);
+          point[0] = mag * cos(deg + r);
+          point[1] = mag * sin(deg + r);
         }
       }
     }
 
     this.translation = [0, 0];
     this.scaling = [1, 1];
+    this.rotation = 0;
     return this;
   }
 }
@@ -835,7 +846,7 @@ export class Circle extends VObject {
      * @link https://stackoverflow.com/a/27863181
      */
     const optimalDist = (4 / 3) * tan(PI / (2 * detail));
-    const optimalRad = Math.sqrt(optimalDist ** 2 + 1) * this.r;
+    const optimalRad = sqrt(optimalDist ** 2 + 1) * this.r;
 
     range(detail).forEach((a) => {
       this.addCurve([
@@ -1100,8 +1111,8 @@ export class Axes extends JObject {
     let [start, end] = this.options.range;
 
     if (options.range) {
-      start = Math.max(start, options.range[0]);
-      end = Math.min(end, options.range[1]);
+      start = max(start, options.range[0]);
+      end = min(end, options.range[1]);
     }
 
     const numDivs = options.divisions ?? 100;
@@ -1181,7 +1192,7 @@ export class Parallel extends JAnimation {
   private updateDurationMs() {
     this.durationMs = this.anims
       .map((anim) => anim.durationMs)
-      .reduce((p, r) => Math.max(p, r), 0);
+      .reduce((p, r) => max(p, r), 0);
   }
 
   add(...anims: JAnimation[]) {
@@ -1525,7 +1536,7 @@ export class Stroke extends JAnimation {
           0,
           lerpNum(0.5, this.bound.left, this.bound.right),
           lerpNum(0.5, this.bound.top, this.bound.bottom),
-          Math.max(
+          max(
             this.bound.right - this.bound.left,
             this.bound.top - this.bound.bottom
           )
@@ -1571,7 +1582,7 @@ export class NicerStroke extends JAnimation {
       this.obj.glyphData = (this.initialGlyphData as GlpyhData3D).map(
         (contour) => {
           const numCurves = contour.length;
-          const numDrawn = Math.floor(numCurves * t);
+          const numDrawn = floor(numCurves * t);
           const drawn = contour.slice(0, numDrawn);
           if (numDrawn < contour.length) {
             drawn.push(
@@ -1586,7 +1597,7 @@ export class NicerStroke extends JAnimation {
       this.obj.glyphData = (this.initialGlyphData as GlpyhData).map(
         (contour) => {
           const numCurves = contour.length;
-          const numDrawn = Math.floor(numCurves * t);
+          const numDrawn = floor(numCurves * t);
           const drawn = contour.slice(0, numDrawn);
           if (numDrawn < contour.length) {
             drawn.push(splitBezier(contour[numDrawn], (t * numCurves) % 1)[0]);

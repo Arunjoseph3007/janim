@@ -407,19 +407,23 @@ export class VObject extends JObject {
     }
   }
 
-  absorbTranslation() {
+  absorbTransforms() {
     const [tx, ty] = this.translation;
+    const [sx, sy] = this.scaling;
 
+    logger.warn("TODO: `absorbTransforms` rotations are not supported right now");
     for (const contour of this.glyphData) {
       for (const curve of contour) {
         for (const point of curve) {
-          point[0] += tx;
-          point[1] += ty;
+          // TODO: also handle rotations
+          point[0] = (point[0] + tx) * sx;
+          point[1] = (point[1] + ty) * sy;
         }
       }
     }
 
     this.translation = [0, 0];
+    this.scaling = [1, 1];
     return this;
   }
 }
@@ -731,8 +735,8 @@ export class Union extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
-    a.absorbTranslation();
-    b.absorbTranslation();
+    a.absorbTransforms();
+    b.absorbTransforms();
 
     this.glyphData = findUnion(a.glyphData, b.glyphData);
   }
@@ -746,8 +750,8 @@ export class Intersection extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
-    a.absorbTranslation();
-    b.absorbTranslation();
+    a.absorbTransforms();
+    b.absorbTransforms();
 
     this.glyphData = findIntersection(a.glyphData, b.glyphData);
   }

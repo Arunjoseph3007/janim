@@ -255,7 +255,8 @@ class IntersectionWIP extends Scene {
       .Text("Q")
       .setFontSize(35)
       .stroke("#ffffff44")
-      .translate(-350, 90);
+      .translate(-350, 90)
+      .scale(1.3, 1.3);
     const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
 
     this.add(tx, sq);

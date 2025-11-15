@@ -1,4 +1,4 @@
-enum LogLevel {
+export enum JLogLevel {
   TRACE = 1,
   DEBUG = 2,
   INFO = 3,
@@ -15,12 +15,13 @@ const noop: LogFunc = () => {};
  * Ths motivation behind this is to setup permanent logs instead of adding them when required
  * The problem with this is that we loose the line number info
  */
-export default class Logger {
+export default class JLogger {
   label: string;
-  level: LogLevel;
+  private level: JLogLevel;
 
   trace: LogFunc = noop;
   debug: LogFunc = noop;
+  log: LogFunc = noop;
   info: LogFunc = noop;
   warn: LogFunc = noop;
   error: LogFunc = noop;
@@ -29,33 +30,38 @@ export default class Logger {
 
   constructor(label: string = "logger") {
     this.label = label;
-    this.level = LogLevel.INFO;
+    this.level = JLogLevel.INFO;
 
     this.adjustByLevel();
   }
 
   private adjustByLevel() {
-    this.trace = this.level >= LogLevel.TRACE ? console.trace : noop;
-    this.debug = this.level >= LogLevel.DEBUG ? console.debug : noop;
-    this.info = this.level >= LogLevel.INFO ? console.info : noop;
-    this.warn = this.level >= LogLevel.WARN ? console.warn : noop;
-    this.error = this.level >= LogLevel.ERROR ? console.error : noop;
-    this.fatal = this.level >= LogLevel.FATAL ? console.error : noop;
+    this.trace = this.level <= JLogLevel.TRACE ? console.trace : noop;
+    this.debug = this.level <= JLogLevel.DEBUG ? console.debug : noop;
+    this.log = this.level <= JLogLevel.DEBUG ? console.info : noop;
+    this.info = this.level <= JLogLevel.INFO ? console.info : noop;
+    this.warn = this.level <= JLogLevel.WARN ? console.warn : noop;
+    this.error = this.level <= JLogLevel.ERROR ? console.error : noop;
+    this.fatal = this.level <= JLogLevel.FATAL ? console.error : noop;
   }
 
   extend(label: string) {
-    const extended = new Logger(this.label + ":" + label);
+    const extended = new JLogger(this.label + ":" + label);
     extended.setLogLevel(this.level);
     return extended;
   }
 
-  setLogLevel(level: LogLevel) {
+  setLogLevel(level: JLogLevel) {
     this.level = level;
 
     this.adjustByLevel();
   }
 
+  getLogLevel() {
+    return this.level;
+  }
+
   silence() {
-    this.setLogLevel(LogLevel.NONE);
+    this.setLogLevel(JLogLevel.NONE);
   }
 }

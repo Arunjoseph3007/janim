@@ -34,6 +34,13 @@ import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
 import { linear } from "./easing";
 import { findUnion } from "./clipping";
+import JLogger, { JLogLevel } from "./logger";
+
+const logger = new JLogger("janim");
+logger.setLogLevel(JLogLevel.DEBUG);
+if (!DEBUG) {
+  logger.silence();
+}
 
 const { PI, tan } = Math;
 
@@ -300,7 +307,7 @@ export class VObject extends JObject {
   }
   lineTo(point: Vec2) {
     const mid = midpoint(this.pos(), point);
-    this.addCurve([[...this.pos()], mid, mid, point]);
+    this.addCurve([[...this.pos()], [...mid], [...mid], point]);
     return this;
   }
   cubicTo(c1: Vec2, c2: Vec2, c: Vec2) {
@@ -308,7 +315,7 @@ export class VObject extends JObject {
     return this;
   }
   quadTo(control: Vec2, point: Vec2) {
-    this.addCurve([[...this.pos()], control, control, point]);
+    this.addCurve([[...this.pos()], [...control], [...control], point]);
     return this;
   }
   getBounds(): Bounds {
@@ -403,18 +410,17 @@ export class VObject extends JObject {
     }
   }
 
-  // TODO something is messed up here eg. jf.Rectangle(600, 100).translate(-100, 0);
   absorbTranslation() {
     const [tx, ty] = this.translation;
 
-    this.glyphData.forEach((contour) => {
-      contour.forEach((curve) => {
-        curve.forEach((point) => {
+    for (const contour of this.glyphData) {
+      for (const curve of contour) {
+        for (const point of curve) {
           point[0] += tx;
           point[1] += ty;
-        });
-      });
-    });
+        }
+      }
+    }
 
     this.translation = [0, 0];
     return this;

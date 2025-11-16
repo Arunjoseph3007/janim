@@ -447,3 +447,5 @@ export const findIntersection = (a: GlpyhData, b: GlpyhData): GlpyhData => {
 
   return unionGlyph;
 };
+
+// TODO: findUnion & findIntersection are very similar and can be merged into just one

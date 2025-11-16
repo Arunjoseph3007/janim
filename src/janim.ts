@@ -1884,41 +1884,59 @@ type _CP<T extends abstract new (...args: any) => any> =
   ConstructorParameters<T>;
 
 /**
- * Janim Factory - Incase you hate new keyword
+ * Janim Factory - Incase you hate new keyword.
+ * 
+ * replace
+ * ```
+ * import { Circle, Rectangle, Text } from "./janim";
+ * const ci = new Circle(100);
+ * const rt = new Rectabgle(100, 200);
+ * const tx = new Text("Janim", "Montserrat");
+ * ```
+ * with
+ * ```
+ * import { jf } from "./janim";
+ * const ci = jf.Circle(100);
+ * const rt = jf.Rectabgle(100, 200);
+ * const tx = jf.Text("Janim", "Montserrat");
+ * ```
+ * 
+ * completely type safe
  */
+// prettier-ignore
 export const jf = {
   // Utils
   RGBA: (...a: _CP<typeof RGBA>) => new RGBA(...a),
   // JObjects
-  Circle: (...a: _CP<typeof Circle>) => new Circle(...a),
-  Rectangle: (...a: _CP<typeof Rectangle>) => new Rectangle(...a),
-  Polygon: (...a: _CP<typeof Polygon>) => new Polygon(...a),
-  Group: (...a: _CP<typeof Group>) => new Group(...a),
-  VObject: (...a: _CP<typeof VObject>) => new VObject(...a),
-  NativeText: (...a: _CP<typeof NativeText>) => new NativeText(...a),
-  Text: (...a: _CP<typeof Text>) => new Text(...a),
-  Image: (...a: _CP<typeof Image>) => new Image(...a),
-  Letter: (...a: _CP<typeof Letter>) => new Letter(...a),
-  Axes: (...a: _CP<typeof Axes>) => new Axes(...a),
-  Union: (...a: _CP<typeof Union>) => new Union(...a),
-  Intersection: (...a: _CP<typeof Intersection>) => new Intersection(...a),
+  Circle:       (...a: _CP<typeof Circle>)        => new Circle(...a),
+  Rectangle:    (...a: _CP<typeof Rectangle>)     => new Rectangle(...a),
+  Polygon:      (...a: _CP<typeof Polygon>)       => new Polygon(...a),
+  Group:        (...a: _CP<typeof Group>)         => new Group(...a),
+  VObject:      (...a: _CP<typeof VObject>)       => new VObject(...a),
+  NativeText:   (...a: _CP<typeof NativeText>)    => new NativeText(...a),
+  Text:         (...a: _CP<typeof Text>)          => new Text(...a),
+  Image:        (...a: _CP<typeof Image>)         => new Image(...a),
+  Letter:       (...a: _CP<typeof Letter>)        => new Letter(...a),
+  Axes:         (...a: _CP<typeof Axes>)          => new Axes(...a),
+  Union:        (...a: _CP<typeof Union>)         => new Union(...a),
+  Intersection: (...a: _CP<typeof Intersection>)  => new Intersection(...a),
   // 3D
-  VObject3D: (...a: _CP<typeof VObject3D>) => new VObject3D(...a),
-  Cube: (...a: _CP<typeof Cube>) => new Cube(...a),
+  VObject3D:  (...a: _CP<typeof VObject3D>) => new VObject3D(...a),
+  Cube:       (...a: _CP<typeof Cube>)      => new Cube(...a),
   // Janims
-  Translate: (...a: _CP<typeof Translate>) => new Translate(...a),
-  FadeIn: (...a: _CP<typeof FadeIn>) => new FadeIn(...a),
-  Spinner: (...a: _CP<typeof Spinner>) => new Spinner(...a),
-  ColorMorph: (...a: _CP<typeof ColorMorph>) => new ColorMorph(...a),
-  Wait: (...a: _CP<typeof Wait>) => new Wait(...a),
-  Sequence: (...a: _CP<typeof Sequence>) => new Sequence(...a),
-  Parallel: (...a: _CP<typeof Parallel>) => new Parallel(...a),
-  Repeat: (...a: _CP<typeof Repeat>) => new Repeat(...a),
-  Morph: (...a: _CP<typeof Morph>) => new Morph(...a),
-  ShapeMorph: (...a: _CP<typeof ShapeMorph>) => new ShapeMorph(...a),
-  VMorph: (...a: _CP<typeof VMorph>) => new VMorph(...a),
-  Stroke: (...a: _CP<typeof Stroke>) => new Stroke(...a),
-  NicerStroke: (...a: _CP<typeof NicerStroke>) => new NicerStroke(...a),
-  Write: (...a: _CP<typeof Write>) => new Write(...a),
-  Create: (...a: _CP<typeof Create>) => new Create(...a),
+  Translate:    (...a: _CP<typeof Translate>)   => new Translate(...a),
+  FadeIn:       (...a: _CP<typeof FadeIn>)      => new FadeIn(...a),
+  Spinner:      (...a: _CP<typeof Spinner>)     => new Spinner(...a),
+  ColorMorph:   (...a: _CP<typeof ColorMorph>)  => new ColorMorph(...a),
+  Wait:         (...a: _CP<typeof Wait>)        => new Wait(...a),
+  Sequence:     (...a: _CP<typeof Sequence>)    => new Sequence(...a),
+  Parallel:     (...a: _CP<typeof Parallel>)    => new Parallel(...a),
+  Repeat:       (...a: _CP<typeof Repeat>)      => new Repeat(...a),
+  Morph:        (...a: _CP<typeof Morph>)       => new Morph(...a),
+  ShapeMorph:   (...a: _CP<typeof ShapeMorph>)  => new ShapeMorph(...a),
+  VMorph:       (...a: _CP<typeof VMorph>)      => new VMorph(...a),
+  Stroke:       (...a: _CP<typeof Stroke>)      => new Stroke(...a),
+  NicerStroke:  (...a: _CP<typeof NicerStroke>) => new NicerStroke(...a),
+  Write:        (...a: _CP<typeof Write>)       => new Write(...a),
+  Create:       (...a: _CP<typeof Create>)      => new Create(...a),
 };

@@ -248,14 +248,14 @@ class Tracker extends Scene {
     await this.play(va);
   }
 }
-class IntersectionWIP extends Scene {
+class Intersection extends Scene {
   async construct() {
     this.selfCenter = true;
     const tx = jf
       .Text("Q")
       .setFontSize(35)
       .stroke("#ffffff44")
-      .translate(-350, 90)
+      .translate(-350, -80)
       .scale(1.3, 1.3)
       .rotateDeg(45);
     const sq = jf.Rectangle(600, 100).stroke("#ffffff44");
@@ -389,7 +389,7 @@ const SceneMap: Record<string, typeof Scene> = {
   AxesAndPlotting,
   Images,
   Tracker,
-  IntersectionWIP,
+  Intersection,
   UnionWIP,
   SubBezier,
   ThreeDCube,
@@ -414,7 +414,7 @@ async function main() {
   await loadLocalFont("Montserrat");
   await loadLocalFont("JetBrainsMono");
 
-  let sc: Scene | null = new IntersectionWIP(ctx);
+  let sc: Scene | null = new Intersection(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {

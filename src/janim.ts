@@ -416,19 +416,19 @@ export class VObject extends JObject {
     for (const contour of this.glyphData) {
       for (const curve of contour) {
         for (const point of curve) {
-          // translations
-          point[0] += tx;
-          point[1] += ty;
-
-          // scaling
-          point[0] *= sx;
-          point[1] *= sy;
-
           // rotation
           const mag = sqrt(point[0] ** 2 + point[1] ** 2);
           const deg = atan2(point[1], point[0]);
           point[0] = mag * cos(deg + r);
           point[1] = mag * sin(deg + r);
+
+          // scaling
+          point[0] *= sx;
+          point[1] *= sy;
+
+          // translations
+          point[0] += tx;
+          point[1] += ty;
         }
       }
     }
@@ -437,6 +437,34 @@ export class VObject extends JObject {
     this.scaling = [1, 1];
     this.rotation = 0;
     return this;
+  }
+  getTransformedGlyphData() {
+    const [tx, ty] = this.translation;
+    const [sx, sy] = this.scaling;
+    const r = this.rotation;
+
+    const glyphDataCopy = structuredClone(this.glyphData);
+    for (const contour of glyphDataCopy) {
+      for (const curve of contour) {
+        for (const point of curve) {
+          // rotation
+          const mag = sqrt(point[0] ** 2 + point[1] ** 2);
+          const deg = atan2(point[1], point[0]);
+          point[0] = mag * cos(deg + r);
+          point[1] = mag * sin(deg + r);
+
+          // scaling
+          point[0] *= sx;
+          point[1] *= sy;
+
+          // translations
+          point[0] += tx;
+          point[1] += ty;
+        }
+      }
+    }
+
+    return glyphDataCopy;
   }
 }
 export class VObject3D extends JObject {
@@ -747,10 +775,10 @@ export class Union extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
-    a.absorbTransforms();
-    b.absorbTransforms();
-
-    this.glyphData = findUnion(a.glyphData, b.glyphData);
+    this.glyphData = findUnion(
+      a.getTransformedGlyphData(),
+      b.getTransformedGlyphData()
+    );
   }
 }
 /**
@@ -762,10 +790,10 @@ export class Intersection extends VObject {
   constructor(a: VObject, b: VObject) {
     super();
 
-    a.absorbTransforms();
-    b.absorbTransforms();
-
-    this.glyphData = findIntersection(a.glyphData, b.glyphData);
+    this.glyphData = findIntersection(
+      a.getTransformedGlyphData(),
+      b.getTransformedGlyphData()
+    );
   }
 }
 /**
@@ -1885,7 +1913,7 @@ type _CP<T extends abstract new (...args: any) => any> =
 
 /**
  * Janim Factory - Incase you hate new keyword.
- * 
+ *
  * replace
  * ```
  * import { Circle, Rectangle, Text } from "./janim";
@@ -1900,7 +1928,7 @@ type _CP<T extends abstract new (...args: any) => any> =
  * const rt = jf.Rectabgle(100, 200);
  * const tx = jf.Text("Janim", "Montserrat");
  * ```
- * 
+ *
  * completely type safe
  */
 // prettier-ignore

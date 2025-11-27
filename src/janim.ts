@@ -30,6 +30,7 @@ import {
   splitBezier,
   todo,
   quadraticToCubicBezier,
+  unreachable,
 } from "./utils";
 import GoogleFontsJson from "./googleFonts.json";
 import { colorToRGBA, lerpRgba, RGBA, TRANSPARENT, WHITE } from "./rgba";
@@ -40,7 +41,36 @@ import JLogger, { JLogLevel } from "./logger";
 const logger = new JLogger("janim");
 logger.setLogLevel(JLogLevel.DEBUG);
 
-const { PI, min, max, floor, tan, sin, cos, atan2, sqrt } = Math;
+const { PI, min, max, floor, tan, sin, cos, atan2, sqrt, random } = Math;
+
+/**
+ * Takes 2 VObjects and adds some dummy contour and dummy glyphs
+ * so that they have the same shape
+ * @param avobj VObject
+ * @param bvobj VObject
+ */
+const similarizeGlyphs = (avobj: VObject, bvobj: VObject) => {
+  while (avobj.glyphData.length < bvobj.glyphData.length)
+    avobj.addDummyContour();
+  while (bvobj.glyphData.length < avobj.glyphData.length)
+    bvobj.addDummyContour();
+
+  range(avobj.glyphData.length).forEach((i) => {
+    const srcContour = avobj.glyphData[i];
+    const destContour = bvobj.glyphData[i];
+
+    while (srcContour.length < destContour.length) {
+      const endPos = srcContour[srcContour.length - 1][3];
+      srcContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+    }
+    while (destContour.length < srcContour.length) {
+      const endPos = destContour[destContour.length - 1][3];
+      destContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
+    }
+
+    console.assert(srcContour.length == destContour.length, "Fails");
+  });
+};
 
 /*##########################################################
 ######################  FONT STUFF  ########################
@@ -796,6 +826,111 @@ export class Intersection extends VObject {
     );
   }
 }
+export class Blender extends VObject {
+  private avobj: VObject;
+  private bvobj: VObject;
+  constructor(a: VObject, b: VObject, blend = 0.5) {
+    super();
+
+    this.avobj = a;
+    this.bvobj = b;
+
+    similarizeGlyphs(this.avobj, this.bvobj);
+    this.setBlend(blend);
+  }
+
+  setBlend(blend: number) {
+    logger.assert(blend >= 0 && blend <= 1, "Blend must be between 0 and 1");
+
+    this.glyphData = lerpGlyph(
+      blend,
+      this.avobj.getTransformedGlyphData(),
+      this.bvobj.getTransformedGlyphData()
+    );
+    return this;
+  }
+}
+
+export enum WiggleDir {
+  None,
+  Positive,
+  Negative,
+  Both,
+}
+export class Wiggler extends VObject {
+  static WIGGLE_MAX = 10;
+
+  private vobj: VObject;
+  private wiggle = 0.5;
+  private xDir: WiggleDir = WiggleDir.Both;
+  private yDir: WiggleDir = WiggleDir.Both;
+
+  constructor(vobj: VObject, wiggle = 0.5) {
+    super();
+
+    this.vobj = vobj;
+    this.wiggle = wiggle;
+    this.recompute();
+  }
+
+  setXDir(d: WiggleDir) {
+    this.xDir = d;
+    this.recompute();
+    return this;
+  }
+  setYDir(d: WiggleDir) {
+    this.yDir = d;
+    this.recompute();
+    return this;
+  }
+  setBothDir(d: WiggleDir) {
+    this.yDir = d;
+    this.xDir = d;
+    this.recompute();
+    return this;
+  }
+  setWiggle(w: number) {
+    this.wiggle = w;
+    this.recompute();
+    return this;
+  }
+
+  private static dirToWiggle(d: WiggleDir) {
+    const r = random();
+
+    switch (d) {
+      case WiggleDir.Both:
+        return r * 2 - 1;
+      case WiggleDir.Positive:
+        return r;
+      case WiggleDir.Negative:
+        return -r;
+      case WiggleDir.None:
+        return 0;
+      default:
+        unreachable("getMutliplierForDir");
+        return 0;
+    }
+  }
+
+  private recompute() {
+    const glyphData = this.vobj.getTransformedGlyphData();
+
+    for (const contour of glyphData) {
+      for (const curve of contour) {
+        for (const p of curve) {
+          p[0] +=
+            Wiggler.dirToWiggle(this.xDir) * Wiggler.WIGGLE_MAX * this.wiggle;
+          p[1] +=
+            Wiggler.dirToWiggle(this.yDir) * Wiggler.WIGGLE_MAX * this.wiggle;
+        }
+      }
+    }
+
+    this.glyphData = glyphData;
+    return this;
+  }
+}
 /**
  * To render text using native functions.
  * If you want features like morphing use Text instead
@@ -1432,27 +1567,7 @@ export class ShapeMorph extends SimplePropertyAnim {
     this.source = source;
     this.dest = dest;
 
-    while (this.source.glyphData.length < this.dest.glyphData.length)
-      this.source.addDummyContour();
-    while (this.dest.glyphData.length < this.source.glyphData.length)
-      this.dest.addDummyContour();
-
-    range(this.source.glyphData.length).forEach((i) => {
-      const srcContour = this.source.glyphData[i];
-      const destContour = this.dest.glyphData[i];
-
-      while (srcContour.length < destContour.length) {
-        const endPos = srcContour[srcContour.length - 1][3];
-        srcContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
-      }
-      while (destContour.length < srcContour.length) {
-        const endPos = destContour[destContour.length - 1][3];
-        destContour.push([[...endPos], [...endPos], [...endPos], [...endPos]]);
-      }
-
-      console.assert(srcContour.length == destContour.length, "Fails");
-    });
-
+    similarizeGlyphs(this.source, this.dest);
     this.from = this.source.glyphData;
   }
 
@@ -1948,6 +2063,8 @@ export const jf = {
   Axes:         (...a: _CP<typeof Axes>)          => new Axes(...a),
   Union:        (...a: _CP<typeof Union>)         => new Union(...a),
   Intersection: (...a: _CP<typeof Intersection>)  => new Intersection(...a),
+  Blender:      (...a: _CP<typeof Blender>)       => new Blender(...a),
+  Wiggler:      (...a: _CP<typeof Wiggler>)       => new Wiggler(...a),
   // 3D
   VObject3D:  (...a: _CP<typeof VObject3D>) => new VObject3D(...a),
   Cube:       (...a: _CP<typeof Cube>)      => new Cube(...a),

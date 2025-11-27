@@ -15,6 +15,9 @@ export const todo = (): never => {
   throw new Error("TODO: not implmented yet");
 };
 
+export const unreachable = (msg = "DEfAUlt Unreachable") => {
+  throw new Error(`UNREACHABLE: Reached ${msg}`);
+};
 export const range = (r: number) => new Array(r).fill(0).map((_, i) => i);
 
 export const stepRange = (start: number, end: number, step = 1) => {

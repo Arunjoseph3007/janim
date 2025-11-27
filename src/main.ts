@@ -1,5 +1,5 @@
 import "./style.css";
-import { Cube, Image, Scene, jf, loadLocalFont } from "./janim";
+import { Cube, Image, Scene, WiggleDir, jf, loadLocalFont } from "./janim";
 import { range, vec2Add, vec2Neg } from "./utils";
 import { CubicCurve } from "./types";
 import { Easings } from "./easing";
@@ -376,6 +376,52 @@ class InsideDetection extends Scene {
     this.wait(10000000);
   }
 }
+class Blender extends Scene {
+  construct(): void {
+    this.selfCenter = true;
+
+    const a = jf.Text("M", "Montserrat");
+    const b = jf.Text("C", "Montserrat");
+    const blend = 0.9;
+
+    this.add(a, b);
+    this.add(jf.Blender(a, b, blend).translateX(200).fill("#23d99788"));
+    a.translateX(-200);
+  }
+}
+class Wiggler extends Scene {
+  construct(): void {
+    this.selfCenter = true;
+
+    const v = jf
+      .Text("BOILING", "JetBrainsMono")
+      .setFontSize(10)
+      .translate(-490, -220);
+    this.add(v);
+
+    this.add(
+      ...range(6).map((i) => jf.Wiggler(v, i * 0.15).translate(520, i * 100))
+    );
+
+    this.add(
+      jf
+        .Wiggler(v, 0.6)
+        .setXDir(WiggleDir.Positive)
+        .setYDir(WiggleDir.None)
+        .translateY(100),
+      jf
+        .Wiggler(v, 0.6)
+        .setXDir(WiggleDir.None)
+        .setYDir(WiggleDir.Positive)
+        .translateY(200),
+      jf
+        .Wiggler(v, 0.6)
+        .setXDir(WiggleDir.Negative)
+        .setYDir(WiggleDir.Positive)
+        .translateY(300)
+    );
+  }
+}
 const SceneMap: Record<string, typeof Scene> = {
   SingleAlphabet,
   AllAlphabets,
@@ -395,6 +441,8 @@ const SceneMap: Record<string, typeof Scene> = {
   ThreeDCube,
   QWriteAnim,
   InsideDetection,
+  Blender,
+  Wiggler,
 };
 
 async function main() {
@@ -414,7 +462,7 @@ async function main() {
   await loadLocalFont("Montserrat");
   await loadLocalFont("JetBrainsMono");
 
-  let sc: Scene | null = new Intersection(ctx);
+  let sc: Scene | null = new Wiggler(ctx);
 
   const sceneSelect = document.querySelector("#scene-select")!;
   for (const scene in SceneMap) {
